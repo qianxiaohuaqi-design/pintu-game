@@ -9,6 +9,7 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Font;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -28,12 +29,13 @@ import javax.swing.ScrollPaneConstants;
 public class GameFrame extends JFrame implements KeyListener, ActionListener {
     // 定义静态内部类表示盘面状态
     static class BoardState {
-        int[][] data = new int[4][4];
+        int[][] data;
         int x, y; // 空白位置
 
-        BoardState(int[][] arr, int x, int y) {
-            for (int i = 0; i < 4; i++) {
-                System.arraycopy(arr[i], 0, this.data[i], 0, 4);
+        BoardState(int[][] arr, int x, int y, int size) {
+            this.data = new int[size][size];
+            for (int i = 0; i < size; i++) {
+                System.arraycopy(arr[i], 0, this.data[i], 0, size);
             }
             this.x = x;
             this.y = y;
@@ -43,8 +45,9 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         public boolean equals(Object obj) {
             if (obj instanceof BoardState) {
                 BoardState other = (BoardState) obj;
-                for (int i = 0; i < 4; i++) {
-                    for (int j = 0; j < 4; j++) {
+                if (this.data.length != other.data.length) return false;
+                for (int i = 0; i < this.data.length; i++) {
+                    for (int j = 0; j < this.data[i].length; j++) {
                         if (this.data[i][j] != other.data[i][j]) {
                             return false;
                         }
@@ -58,8 +61,8 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         @Override
         public int hashCode() {
             int hash = 0;
-            for (int i = 0; i < 4; i++) {
-                for (int j = 0; j < 4; j++) {
+            for (int i = 0; i < this.data.length; i++) {
+                for (int j = 0; j < this.data[i].length; j++) {
                     hash = 31 * hash + this.data[i][j];
                 }
             }
@@ -194,18 +197,28 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         }
     }
 
-    int[][] arr2 = new int[4][4];
+    int[][] arr2;
+    int[][] win;
+    int gridSize = 4;
+    boolean isChallengeMode = false;
+    String username = "admin";
+    Timer gameTimer;
+    int timeElapsed = 0;
+    boolean timerStarted = false;
+    boolean scoreSaved = false;
 
     // 现代化横向大按钮
     ModernButton replayBtn = new ModernButton("重新游戏");
     ModernButton changeImageBtn = new ModernButton("更换图片");
     ModernButton hintBtn = new ModernButton("智能提示");
+    ModernButton leaderboardBtn = new ModernButton("排行榜");
     ModernButton reLoginBtn = new ModernButton("重新登录");
     ModernButton exitBtn = new ModernButton("退出游戏");
 
     // 常驻界面组件
     RoundedPanel controlPanel;
     JLabel stepCountLabel;
+    JLabel timerLabel;
     JPanel puzzlePanel;
     JLabel fullImageLabel;
     JLabel bgLabel;
@@ -244,15 +257,21 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
     int y = 0;
 
     String path = "image/cat/cat1/";
-    // 定义二维数组，存储正确数据
-    int[][] win = {
-            { 1, 2, 3, 4 },
-            { 5, 6, 7, 8 },
-            { 9, 10, 11, 12 },
-            { 13, 14, 15, 0 }
-    };
+    ImageIcon[] slicedImages;
 
-    public GameFrame() {
+    public GameFrame(String username, int gridSize, boolean isChallengeMode) {
+        this.username = username;
+        this.gridSize = gridSize;
+        this.isChallengeMode = isChallengeMode;
+
+        // 初始化胜利和玩家网格
+        this.win = new int[gridSize][gridSize];
+        for (int i = 0; i < gridSize; i++) {
+            for (int j = 0; j < gridSize; j++) {
+                this.win[i][j] = i * gridSize + j + 1;
+            }
+        }
+        this.win[gridSize - 1][gridSize - 1] = 0;
 
         // 初始化界面
         initJFrame();
@@ -261,6 +280,8 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         initControlBar();
         // 初始化数据
         initData();
+        // 动态裁剪生成切片图片
+        sliceImage();
         // 初始化图片
         initImage();
 
@@ -294,6 +315,10 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         } else {
             this.requestFocusInWindow();
         }
+    }
+
+    public GameFrame() {
+        this("admin", 4, false);
     }
 
     private void showTutorialDialog() {
@@ -696,7 +721,10 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
                                 // 左键点击：直接开始游戏
                                 path = "image/custom/" + name + "/";
                                 step = 0;
+                                resetTimer();
                                 winAnimationPlayed = false;
+                                scoreSaved = false;
+                                sliceImage();
                                 initData();
                                 initImage();
 
@@ -741,7 +769,10 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
                                             if (path.equals("image/custom/" + name + "/")) {
                                                 path = "image/cat/cat1/";
                                                 step = 0;
+                                                resetTimer();
                                                 winAnimationPlayed = false;
+                                                scoreSaved = false;
+                                                sliceImage();
                                                 initData();
                                                 initImage();
                                             }
@@ -781,46 +812,290 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         return dir.delete();
     }
 
+    // ── 内存切片与计时器等核心辅助逻辑 ────────────────────────
+
+    /**
+     * 动态读取 path 下的 all.jpg，并根据当前 gridSize 进行切图存储于内存中
+     */
+    private void sliceImage() {
+        slicedImages = new ImageIcon[gridSize * gridSize];
+        BufferedImage fullImage = null;
+        try {
+            java.net.URL url = this.getClass().getResource("/" + path + "all.jpg");
+            if (url != null) {
+                fullImage = ImageIO.read(url);
+            } else {
+                fullImage = ImageIO.read(new File(path + "all.jpg"));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        // 若原图加载失败，初始化为白底空图
+        if (fullImage == null) {
+            for (int i = 0; i < gridSize * gridSize; i++) {
+                slicedImages[i] = new ImageIcon();
+            }
+            return;
+        }
+
+        // 动态分割
+        int tilePixels = 540 / gridSize;
+        int idx = 1;
+        for (int i = 0; i < gridSize; i++) {
+            for (int j = 0; j < gridSize; j++) {
+                // 原图固定是 540x540，等分切割
+                BufferedImage sub = fullImage.getSubimage(j * tilePixels, i * tilePixels, tilePixels, tilePixels);
+                // 缩放到最终渲染大小并转为 ImageIcon 存放
+                Image scaled = sub.getScaledInstance(tilePixels, tilePixels, Image.SCALE_SMOOTH);
+                slicedImages[idx] = new ImageIcon(scaled);
+                idx++;
+                if (idx >= gridSize * gridSize) {
+                    break;
+                }
+            }
+            if (idx >= gridSize * gridSize) {
+                break;
+            }
+        }
+        // 空白位置 0 索引关联的图片为空白 Icon
+        slicedImages[0] = new ImageIcon();
+    }
+
+    private void startTimerIfNeeded() {
+        if (!timerStarted && !victory()) {
+            timerStarted = true;
+            timeElapsed = 0;
+            if (gameTimer != null) {
+                gameTimer.stop();
+            }
+            gameTimer = new Timer(1000, e -> {
+                if (victory()) {
+                    gameTimer.stop();
+                    return;
+                }
+                timeElapsed++;
+                updateTimerLabel();
+            });
+            gameTimer.start();
+        }
+    }
+
+    private void updateTimerLabel() {
+        if (timerLabel != null) {
+            int min = timeElapsed / 60;
+            int sec = timeElapsed % 60;
+            String modeStr = isChallengeMode ? "挑战时间: " : "游戏时间: ";
+            timerLabel.setText(String.format("%s%02d:%02d", modeStr, min, sec));
+        }
+    }
+
+    private void resetTimer() {
+        if (gameTimer != null) {
+            gameTimer.stop();
+        }
+        timeElapsed = 0;
+        timerStarted = false;
+        updateTimerLabel();
+    }
+
+    // ── 排行榜数据存储逻辑 ─────────────────────────────────────
+
+    static class LeaderboardRecord implements Comparable<LeaderboardRecord> {
+        String username;
+        int gridSize;
+        int timeInSeconds;
+        int steps;
+        String date;
+
+        LeaderboardRecord(String username, int gridSize, int timeInSeconds, int steps, String date) {
+            this.username = username;
+            this.gridSize = gridSize;
+            this.timeInSeconds = timeInSeconds;
+            this.steps = steps;
+            this.date = date;
+        }
+
+        @Override
+        public int compareTo(LeaderboardRecord o) {
+            return Integer.compare(this.timeInSeconds, o.timeInSeconds);
+        }
+    }
+
+    private List<LeaderboardRecord> readLeaderboard() {
+        List<LeaderboardRecord> list = new ArrayList<>();
+        File file = new File("leaderboard.txt");
+        if (!file.exists()) {
+            return list;
+        }
+        try (java.io.BufferedReader br = new java.io.BufferedReader(new java.io.InputStreamReader(
+                new java.io.FileInputStream(file), java.nio.charset.StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length >= 5) {
+                    try {
+                        String user = parts[0].trim();
+                        int size = Integer.parseInt(parts[1].trim());
+                        int seconds = Integer.parseInt(parts[2].trim());
+                        int steps = Integer.parseInt(parts[3].trim());
+                        String date = parts[4].trim();
+                        list.add(new LeaderboardRecord(user, size, seconds, steps, date));
+                    } catch (NumberFormatException e) {
+                        // 跳过无效行
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
+    private void saveScore(String user, int size, int seconds, int steps) {
+        String date = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm").format(new java.util.Date());
+        File file = new File("leaderboard.txt");
+        try (java.io.BufferedWriter bw = new java.io.BufferedWriter(new java.io.OutputStreamWriter(
+                new java.io.FileOutputStream(file, true), java.nio.charset.StandardCharsets.UTF_8))) {
+            bw.write(String.format("%s,%d,%d,%d,%s\n", user, size, seconds, steps, date));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void showLeaderboardDialog() {
+        CustomDialog dialog = new CustomDialog(this, "排行榜", 450, 480);
+        dialog.centerPanel.setLayout(new BorderLayout());
+
+        List<LeaderboardRecord> allRecords = readLeaderboard();
+
+        JPanel filterPanel = new JPanel(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 10, 5));
+        filterPanel.setOpaque(false);
+        ModernButton btn3 = new ModernButton("3 x 3");
+        ModernButton btn4 = new ModernButton("4 x 4");
+        ModernButton btn5 = new ModernButton("5 x 5");
+        filterPanel.add(btn3);
+        filterPanel.add(btn4);
+        filterPanel.add(btn5);
+        dialog.centerPanel.add(filterPanel, BorderLayout.NORTH);
+
+        JTextPane listPane = new JTextPane();
+        listPane.setContentType("text/html");
+        listPane.setEditable(false);
+        listPane.setBackground(new Color(0xFDFBF7));
+        listPane.setOpaque(true);
+
+        JScrollPane scroll = new JScrollPane(listPane);
+        scroll.setBorder(BorderFactory.createLineBorder(new Color(0xEADCC9), 1, true));
+        scroll.setBackground(new Color(0xFDFBF7));
+        scroll.getViewport().setBackground(new Color(0xFDFBF7));
+        dialog.centerPanel.add(scroll, BorderLayout.CENTER);
+
+        class LeaderboardRefresher {
+            void refresh(int size) {
+                btn3.setActive(size == 3);
+                btn4.setActive(size == 4);
+                btn5.setActive(size == 5);
+
+                List<LeaderboardRecord> filtered = new ArrayList<>();
+                for (LeaderboardRecord r : allRecords) {
+                    if (r.gridSize == size) {
+                        filtered.add(r);
+                    }
+                }
+                java.util.Collections.sort(filtered);
+
+                StringBuilder sb = new StringBuilder();
+                sb.append("<html><body style='font-family:\"微软雅黑\"; color:#5A3000; margin:5px;'>");
+                sb.append("<table width='100%' border='0' cellspacing='0' cellpadding='6'>");
+                sb.append("<tr style='background-color:#F3EDE2; font-weight:bold;'>");
+                sb.append("<td align='center' width='15%'>排名</td>");
+                sb.append("<td width='25%'>玩家</td>");
+                sb.append("<td align='center' width='20%'>时间</td>");
+                sb.append("<td align='center' width='15%'>步数</td>");
+                sb.append("<td align='center' width='25%'>日期</td>");
+                sb.append("</tr>");
+
+                int count = Math.min(filtered.size(), 10);
+                if (count == 0) {
+                    sb.append("<tr><td colspan='5' align='center' style='padding:20px; color:#A07040;'>暂无该难度的挑战记录</td></tr>");
+                } else {
+                    for (int i = 0; i < count; i++) {
+                        LeaderboardRecord r = filtered.get(i);
+                        String rowBg = (i % 2 == 0) ? "#FFFFFF" : "#FDFBF7";
+                        sb.append(String.format("<tr style='background-color:%s;'>", rowBg));
+                        
+                        String rankStr = String.valueOf(i + 1);
+                        if (i == 0) rankStr = "<span style='color:#E74C3C; font-weight:bold;'>🥇 1</span>";
+                        else if (i == 1) rankStr = "<span style='color:#F39C12; font-weight:bold;'>🥈 2</span>";
+                        else if (i == 2) rankStr = "<span style='color:#3498DB; font-weight:bold;'>🥉 3</span>";
+
+                        int min = r.timeInSeconds / 60;
+                        int sec = r.timeInSeconds % 60;
+                        String timeStr = String.format("%02d:%02d", min, sec);
+
+                        sb.append(String.format("<td align='center'>%s</td>", rankStr));
+                        sb.append(String.format("<td><b>%s</b></td>", r.username));
+                        sb.append(String.format("<td align='center' style='color:#D35400;'>%s</td>", timeStr));
+                        sb.append(String.format("<td align='center'>%d</td>", r.steps));
+                        sb.append(String.format("<td align='center' style='font-size:10px; color:#7F8C8D;'>%s</td>", r.date.split(" ")[0]));
+                        sb.append("</tr>");
+                    }
+                }
+                sb.append("</table></body></html>");
+                listPane.setText(sb.toString());
+                listPane.setCaretPosition(0);
+            }
+        }
+
+        LeaderboardRefresher refresher = new LeaderboardRefresher();
+
+        btn3.addActionListener(e -> refresher.refresh(3));
+        btn4.addActionListener(e -> refresher.refresh(4));
+        btn5.addActionListener(e -> refresher.refresh(5));
+
+        ModernButton closeButton = new ModernButton("关闭");
+        closeButton.addActionListener(e -> dialog.dispose());
+        dialog.btnPanel.add(closeButton);
+
+        refresher.refresh(gridSize);
+        dialog.setVisible(true);
+    }
+
     private void initData() {
         // 1. 初始化为胜利（正确）盘面
-        arr2 = new int[][] {
-                { 1, 2, 3, 4 },
-                { 5, 6, 7, 8 },
-                { 9, 10, 11, 12 },
-                { 13, 14, 15, 0 }
-        };
-        x = 3;
-        y = 3;
+        arr2 = new int[gridSize][gridSize];
+        for (int i = 0; i < gridSize; i++) {
+            System.arraycopy(win[i], 0, arr2[i], 0, gridSize);
+        }
+        x = gridSize - 1;
+        y = gridSize - 1;
 
         // 2. 清空历史路径，并将初始获胜状态作为回退的终点
         history.clear();
-        history.add(new BoardState(arr2, x, y));
+        history.add(new BoardState(arr2, x, y, gridSize));
 
         // 3. 通过做随机的合法移动打乱拼图，保证拼图100%可解
         int lastMove = -1; // 用来避免直接退回上一步
         for (int stepIndex = 0; stepIndex < 60; stepIndex++) {
             List<Integer> directions = new ArrayList<>();
-            // 0 代表向上移动空白格（即空白格上面的块下移，x减小）
-            // 1 代表向下移动空白格（即空白格下面的块上移，x增大）
-            // 2 代表向左移动空白格（即空白格左侧的块右移，y减小）
-            // 3 代表向右移动空白格（即空白格右侧的块左移，y增大）
             if (x > 0 && lastMove != 1)
                 directions.add(0);
-            if (x < 3 && lastMove != 0)
+            if (x < gridSize - 1 && lastMove != 0)
                 directions.add(1);
             if (y > 0 && lastMove != 3)
                 directions.add(2);
-            if (y < 3 && lastMove != 2)
+            if (y < gridSize - 1 && lastMove != 2)
                 directions.add(3);
 
             if (directions.isEmpty()) {
                 if (x > 0)
                     directions.add(0);
-                if (x < 3)
+                if (x < gridSize - 1)
                     directions.add(1);
                 if (y > 0)
                     directions.add(2);
-                if (y < 3)
+                if (y < gridSize - 1)
                     directions.add(3);
             }
 
@@ -845,7 +1120,7 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
                 y++;
             }
 
-            BoardState currentState = new BoardState(arr2, x, y);
+            BoardState currentState = new BoardState(arr2, x, y, gridSize);
             // 避免打乱路径中出现环路，优化提示路径长度
             int idx = history.indexOf(currentState);
             if (idx != -1) {
@@ -869,6 +1144,9 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
 
         // 3. 判断并播放胜利动画
         if (victory()) {
+            if (gameTimer != null) {
+                gameTimer.stop();
+            }
             if (!winAnimationPlayed) {
                 winAnimationPlayed = true;
                 if (winLabel != null) {
@@ -896,6 +1174,16 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
                     });
                     winAnimationTimer.start();
                 }
+
+                // 挑战模式结算并持久化成绩
+                if (isChallengeMode && !scoreSaved) {
+                    scoreSaved = true;
+                    saveScore(username, gridSize, timeElapsed, step);
+                    SwingUtilities.invokeLater(() -> {
+                        showCustomMessageDialog("挑战成功", String.format("恭喜！通关用时: %d 秒，总步数: %d 步！成绩已记录到排行榜。", timeElapsed, step), "success");
+                        showLeaderboardDialog();
+                    });
+                }
             }
         } else {
             // 未胜利时移走胜利横幅，并重置播放状态
@@ -914,14 +1202,14 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
             highlightY = targetState.y;
         }
 
-        // 5. 渲染 4x4 拼图块到 puzzlePanel
+        // 5. 渲染 gridSize x gridSize 拼图块到 puzzlePanel
         if (puzzlePanel != null) {
-            for (int i = 0; i < 4; i++) {
-                for (int j = 0; j < 4; j++) {
+            int tileSize = 540 / gridSize;
+            for (int i = 0; i < gridSize; i++) {
+                for (int j = 0; j < gridSize; j++) {
                     int num = arr2[i][j];
-                    // 使用具有呼吸灯特效的 TileLabel 类，相对 puzzlePanel 布局定位
-                    TileLabel jl = new TileLabel(getIcon(path + num + ".jpg", 135, 135));
-                    jl.setBounds(135 * j, 135 * i, 135, 135);
+                    TileLabel jl = new TileLabel(slicedImages[num]);
+                    jl.setBounds(tileSize * j, tileSize * i, tileSize, tileSize);
 
                     if (i == highlightX && j == highlightY) {
                         jl.setHighlighted(true);
@@ -947,8 +1235,15 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         replayBtn.addActionListener(this);
         changeImageBtn.addActionListener(this);
         hintBtn.addActionListener(this);
+        leaderboardBtn.addActionListener(this);
         reLoginBtn.addActionListener(this);
         exitBtn.addActionListener(this);
+
+        // 如果是挑战模式，禁用智能提示
+        if (isChallengeMode) {
+            hintBtn.setEnabled(false);
+            hintBtn.setToolTipText("挑战模式下禁用智能提示！");
+        }
 
         // 设置下拉弹出菜单样式与字体
         changeImagePopupMenu.setBackground(new Color(0xFDFBF7));
@@ -1005,24 +1300,32 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         fullImageLabel.setVisible(false);
         this.getContentPane().add(fullImageLabel);
 
-        // 3. 底部控制栏面板（放在背景图的最下方外部，彻底避免与背景图边框遮挡，且使用网格布局保证所有按钮清晰可见）
+        // 3. 底部控制栏面板（放在背景图的最下方外部，使用网格布局）
         controlPanel = new RoundedPanel(new Color(253, 251, 247, 220), 20);
-        controlPanel.setLayout(new java.awt.GridLayout(1, 5, 10, 0));
+        controlPanel.setLayout(new java.awt.GridLayout(1, 6, 8, 0));
         controlPanel.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
         controlPanel.setBounds(50, 752, 640, 48);
         controlPanel.add(replayBtn);
         controlPanel.add(changeImageBtn);
         controlPanel.add(hintBtn);
+        controlPanel.add(leaderboardBtn);
         controlPanel.add(reLoginBtn);
         controlPanel.add(exitBtn);
         this.getContentPane().add(controlPanel);
 
-        // 4. 步数统计标签（向上移动 20 像素，并去除可能乱码的 Emoji）
+        // 4. 步数统计标签
         stepCountLabel = new JLabel("游戏步数: 0");
         stepCountLabel.setFont(new Font("微软雅黑", Font.BOLD, 18));
         stepCountLabel.setForeground(new Color(0x7B3A00));
         stepCountLabel.setBounds(100, 95, 200, 30);
         this.getContentPane().add(stepCountLabel);
+
+        // 新增：计时标签
+        timerLabel = new JLabel(isChallengeMode ? "挑战时间: 00:00" : "游戏时间: 00:00");
+        timerLabel.setFont(new Font("微软雅黑", Font.BOLD, 18));
+        timerLabel.setForeground(new Color(0x7B3A00));
+        timerLabel.setBounds(350, 95, 200, 30);
+        this.getContentPane().add(timerLabel);
 
         // 5. 拼图区域面板 (向上移动 20 像素)
         puzzlePanel = new JPanel();
@@ -1079,14 +1382,12 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
 
         // 2. 作弊键：W 键 (KeyCode 87)
         if (keyCode == 87) {
-            arr2 = new int[][] {
-                    { 1, 2, 3, 4 },
-                    { 5, 6, 7, 8 },
-                    { 9, 10, 11, 12 },
-                    { 13, 14, 15, 0 }
-            };
-            x = 3;
-            y = 3;
+            arr2 = new int[gridSize][gridSize];
+            for (int i = 0; i < gridSize; i++) {
+                System.arraycopy(win[i], 0, arr2[i], 0, gridSize);
+            }
+            x = gridSize - 1;
+            y = gridSize - 1;
             initImage();
             return;
         }
@@ -1095,9 +1396,10 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         if (victory())
             return;
 
-        // 3. 向左：空白格右侧方块左移 (y < 3)
+        // 3. 向左：空白格右侧方块左移 (y < gridSize - 1)
         if (keyCode == 37) {
-            if (y < 3) {
+            if (y < gridSize - 1) {
+                startTimerIfNeeded();
                 arr2[x][y] = arr2[x][y + 1];
                 arr2[x][y + 1] = 0;
                 y++;
@@ -1110,6 +1412,7 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         // 4. 向右：空白格左侧方块右移 (y > 0)
         else if (keyCode == 39) {
             if (y > 0) {
+                startTimerIfNeeded();
                 arr2[x][y] = arr2[x][y - 1];
                 arr2[x][y - 1] = 0;
                 y--;
@@ -1119,9 +1422,10 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
             }
         }
 
-        // 5. 向上：空白格下方方块上移 (x < 3)
+        // 5. 向上：空白格下方方块上移 (x < gridSize - 1)
         else if (keyCode == 38) {
-            if (x < 3) {
+            if (x < gridSize - 1) {
+                startTimerIfNeeded();
                 arr2[x][y] = arr2[x + 1][y];
                 arr2[x + 1][y] = 0;
                 x++;
@@ -1134,6 +1438,7 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         // 6. 向下：空白格上方方块下移 (x > 0)
         else if (keyCode == 40) {
             if (x > 0) {
+                startTimerIfNeeded();
                 arr2[x][y] = arr2[x - 1][y];
                 arr2[x - 1][y] = 0;
                 x--;
@@ -1145,7 +1450,7 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
     }
 
     private void recordUserMove() {
-        BoardState currentState = new BoardState(arr2, x, y);
+        BoardState currentState = new BoardState(arr2, x, y, gridSize);
         int index = history.indexOf(currentState);
         if (index != -1) {
             // 如果走到了历史路径中的某一步，则说明用户在回退，截断后面的多余路径
@@ -1194,6 +1499,8 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         if (source == replayBtn) {
             step = 0;
             winAnimationPlayed = false; // 重置胜利动画状态
+            scoreSaved = false;
+            resetTimer();
             initData();
             initImage();
         } else if (source == exitBtn) {
@@ -1201,11 +1508,20 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         } else if (source == reLoginBtn) {
             this.setVisible(false);
             this.dispose();
+            if (gameTimer != null) {
+                gameTimer.stop();
+            }
             new LoginFrame();
+        } else if (source == leaderboardBtn) {
+            showLeaderboardDialog();
         } else if (source == changeImageBtn) {
             // 在按钮正下方弹出下拉菜单
             changeImagePopupMenu.show(changeImageBtn, 0, changeImageBtn.getHeight());
         } else if (source == hintBtn) {
+            if (isChallengeMode) {
+                showCustomMessageDialog("提示", "挑战模式下禁用智能提示！", "error");
+                return;
+            }
             isHintEnabled = !isHintEnabled;
             hintBtn.setActive(isHintEnabled);
             if (isHintEnabled) {
@@ -1222,7 +1538,10 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
             } while (newPath.equals(path));
             path = newPath;
             step = 0;
+            resetTimer();
             winAnimationPlayed = false;
+            scoreSaved = false;
+            sliceImage();
             initData();
             initImage();
         } else if (source == dogItem) {
@@ -1234,7 +1553,10 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
             } while (newPath.equals(path));
             path = newPath;
             step = 0;
+            resetTimer();
             winAnimationPlayed = false;
+            scoreSaved = false;
+            sliceImage();
             initData();
             initImage();
         } else if (source == emojiItem) {
@@ -1246,7 +1568,10 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
             } while (newPath.equals(path));
             path = newPath;
             step = 0;
+            resetTimer();
             winAnimationPlayed = false;
+            scoreSaved = false;
+            sliceImage();
             initData();
             initImage();
         } else if (source == customUploadItem) {
@@ -1326,7 +1651,10 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
                 // 刷新当前游戏图片
                 path = "image/custom/" + customName + "/";
                 step = 0;
+                resetTimer();
                 winAnimationPlayed = false;
+                scoreSaved = false;
+                sliceImage();
                 initData();
                 initImage();
 
