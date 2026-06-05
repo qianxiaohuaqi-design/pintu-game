@@ -94,25 +94,13 @@ public class RegisterFrame extends JFrame {
         add(confirmPassField);
 
         // ── 7. 注册按钮 ──
-        registerBtn = makeButton(IMG + "注册按钮.png", IMG + "注册按下.png", 128, 47);
+        registerBtn = makeButton(IMG + "注册按钮.png", IMG + "注册按下.png", 128, 47, () -> doRegister());
         registerBtn.setBounds(80, 310, 128, 47);
-        registerBtn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                doRegister();
-            }
-        });
         add(registerBtn);
 
         // ── 8. 重置按钮 ──
-        resetBtn = makeButton(IMG + "重置按钮.png", IMG + "重置按下.png", 128, 47);
+        resetBtn = makeButton(IMG + "重置按钮.png", IMG + "重置按下.png", 128, 47, () -> doReset());
         resetBtn.setBounds(260, 310, 128, 47);
-        resetBtn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                doReset();
-            }
-        });
         add(resetBtn);
 
         // ── 9. 返回登录按钮（额外添加一个方便操作的小按钮） ──
@@ -223,7 +211,7 @@ public class RegisterFrame extends JFrame {
     }
 
     /** 创建可按压效果的按钮 JLabel */
-    private JLabel makeButton(String normalPath, String pressedPath, int w, int h) {
+    private JLabel makeButton(String normalPath, String pressedPath, int w, int h, Runnable action) {
         ImageIcon normalIcon = loadScaled(normalPath, w, h);
         ImageIcon pressedIcon = loadScaled(pressedPath, w, h);
         JLabel btn = new JLabel(normalIcon);
@@ -232,12 +220,19 @@ public class RegisterFrame extends JFrame {
         btn.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                btn.setIcon(pressedIcon);
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    btn.setIcon(pressedIcon);
+                }
             }
 
             @Override
             public void mouseReleased(MouseEvent e) {
-                btn.setIcon(normalIcon);
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    btn.setIcon(normalIcon);
+                    if (action != null && btn.contains(e.getPoint())) {
+                        action.run();
+                    }
+                }
             }
 
             @Override

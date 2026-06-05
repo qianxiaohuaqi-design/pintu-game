@@ -105,15 +105,18 @@ public class LoginFrame extends JFrame {
         eyeLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         eyeLabel.addMouseListener(new MouseAdapter() {
             boolean showing = false;
-            @Override public void mouseClicked(MouseEvent e) {
-                showing = !showing;
-                passField.setEchoChar(showing ? (char) 0 : '●');
-                String imgPath = showing ? IMG + "显示密码按下.png" : IMG + "显示密码.png";
-                eyeLabel.setIcon(loadScaled(imgPath, showing ? 21 : 18, showing ? 32 : 29));
-                if (showing) {
-                    eyeLabel.setBounds(398, 187, 21, 32);
-                } else {
-                    eyeLabel.setBounds(400, 188, 18, 29);
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e) && eyeLabel.contains(e.getPoint())) {
+                    showing = !showing;
+                    passField.setEchoChar(showing ? (char) 0 : '●');
+                    String imgPath = showing ? IMG + "显示密码按下.png" : IMG + "显示密码.png";
+                    eyeLabel.setIcon(loadScaled(imgPath, showing ? 21 : 18, showing ? 32 : 29));
+                    if (showing) {
+                        eyeLabel.setBounds(398, 187, 21, 32);
+                    } else {
+                        eyeLabel.setBounds(400, 188, 18, 29);
+                    }
                 }
             }
         });
@@ -142,27 +145,24 @@ public class LoginFrame extends JFrame {
         codeLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         codeLabel.setToolTipText("点击刷新验证码");
         codeLabel.addMouseListener(new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) {
-                currentCode = generateCode();
-                codeLabel.setText(currentCode);
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e) && codeLabel.contains(e.getPoint())) {
+                    currentCode = generateCode();
+                    codeLabel.setText(currentCode);
+                }
             }
         });
         add(codeLabel);
 
         // ── 9. 登录按钮 ──
-        loginBtn = makeButton(IMG + "登录按钮.png", IMG + "登录按下.png", 128, 47);
+        loginBtn = makeButton(IMG + "登录按钮.png", IMG + "登录按下.png", 128, 47, () -> doLogin());
         loginBtn.setBounds(80, 310, 128, 47);
-        loginBtn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) { doLogin(); }
-        });
         add(loginBtn);
 
         // ── 10. 注册按钮 ──
-        registerBtn = makeButton(IMG + "注册按钮.png", IMG + "注册按下.png", 128, 47);
+        registerBtn = makeButton(IMG + "注册按钮.png", IMG + "注册按下.png", 128, 47, () -> doRegister());
         registerBtn.setBounds(260, 310, 128, 47);
-        registerBtn.addMouseListener(new MouseAdapter() {
-            @Override public void mouseClicked(MouseEvent e) { doRegister(); }
-        });
         add(registerBtn);
 
         // ── 11. 背景图（最后添加，渲染在最底层）──
@@ -265,16 +265,32 @@ public class LoginFrame extends JFrame {
     }
 
     /** 创建可按压效果的按钮 JLabel */
-    private JLabel makeButton(String normalPath, String pressedPath, int w, int h) {
+    private JLabel makeButton(String normalPath, String pressedPath, int w, int h, Runnable action) {
         ImageIcon normalIcon  = loadScaled(normalPath, w, h);
         ImageIcon pressedIcon = loadScaled(pressedPath, w, h);
         JLabel btn = new JLabel(normalIcon);
         btn.setOpaque(false);
         btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btn.addMouseListener(new MouseAdapter() {
-            @Override public void mousePressed(MouseEvent e)  { btn.setIcon(pressedIcon); }
-            @Override public void mouseReleased(MouseEvent e) { btn.setIcon(normalIcon);  }
-            @Override public void mouseExited(MouseEvent e)   { btn.setIcon(normalIcon);  }
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    btn.setIcon(pressedIcon);
+                }
+            }
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    btn.setIcon(normalIcon);
+                    if (action != null && btn.contains(e.getPoint())) {
+                        action.run();
+                    }
+                }
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                btn.setIcon(normalIcon);
+            }
         });
         return btn;
     }
