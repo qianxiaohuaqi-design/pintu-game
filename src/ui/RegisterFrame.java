@@ -34,7 +34,7 @@ public class RegisterFrame extends JFrame {
                         KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);
                         RegisterFrame.this.setVisible(false);
                         RegisterFrame.this.dispose();
-                        new GameFrame();
+                        new SetupFrame("admin");
                         return true;
                     }
                 }

@@ -49,7 +49,7 @@ public class LoginFrame extends JFrame {
                         KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);
                         LoginFrame.this.setVisible(false);
                         LoginFrame.this.dispose();
-                        new GameFrame();
+                        new SetupFrame("admin");
                         return true;
                     }
                 }
@@ -205,7 +205,7 @@ public class LoginFrame extends JFrame {
         showMsg("登录成功！欢迎：" + user, "登录成功");
         this.setVisible(false);
         this.dispose();
-        new GameFrame();
+        new SetupFrame(user);
     }
 
     // ── 注册逻辑 ──────────────────────────────────────────
