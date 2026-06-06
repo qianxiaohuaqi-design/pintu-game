@@ -2,51 +2,23 @@ package ui;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.KeyEvent;
 
 import static ui.GameStyle.*;
 
 public class RegisterFrame extends JFrame {
 
-    // ── 控件 ──────────────────────────────────────────────
     private JTextField userField;
     private JPasswordField passField;
     private JPasswordField confirmPassField;
 
-    private JLabel registerBtn;
-    private JLabel resetBtn;
-
-    // 图标路径前缀
-    private static final String IMG = "image/register/";
-
     public RegisterFrame() {
         initFrame();
         initComponents();
-
-        // 注册全局 Shift+A 快捷键以便测试时快速进入游戏（免登录）
-        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(new KeyEventDispatcher() {
-            @Override
-            public boolean dispatchKeyEvent(KeyEvent e) {
-                if (!RegisterFrame.this.isShowing()) {
-                    return false;
-                }
-                if (e.getID() == KeyEvent.KEY_PRESSED) {
-                    if (e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_A) {
-                        KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(this);
-                        RegisterFrame.this.setVisible(false);
-                        RegisterFrame.this.dispose();
-                        new SetupFrame("admin");
-                        return true;
-                    }
-                }
-                return false;
-            }
-        });
-
+        registerQuickStart();
         this.setVisible(true);
     }
 
-    // ── 窗口基础设置 ──────────────────────────────────────
     private void initFrame() {
         this.setTitle("拼图游戏 · 注册");
         this.setSize(488, 430);
@@ -57,68 +29,74 @@ public class RegisterFrame extends JFrame {
         this.getContentPane().setLayout(null);
     }
 
-    // ── 布局所有组件 ──────────────────────────────────────
     private void initComponents() {
-        // ── 1. 用户名图标 ──
-        JLabel userIcon = makeIcon(IMG + "注册用户名.png", 79, 17);
-        userIcon.setBounds(85, 122, 79, 17);
-        add(userIcon);
+        JPanel root = new JPanel(null) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                ImageIcon bg = loadScaled(themedPath("image/register/background.png", "image/UI2/register.png"), 470, 390);
+                g.drawImage(bg.getImage(), 0, 0, null);
+            }
+        };
+        root.setOpaque(false);
+        setContentPane(root);
 
-        // ── 2. 用户名输入框 ──
+        JLabel userLabel = sectionLabel("注册用户名");
+        userLabel.setBounds(78, 122, 98, 28);
+        root.add(userLabel);
+
         userField = makeTextField("请输入注册的用户名");
-        userField.setBounds(195, 114, 200, 32);
-        add(userField);
+        userField.setBounds(198, 118, 200, 32);
+        root.add(userField);
 
-        // ── 3. 密码图标 ──
-        JLabel passIcon = makeIcon(IMG + "注册密码.png", 64, 16);
-        passIcon.setBounds(100, 178, 64, 16);
-        add(passIcon);
+        JLabel passLabel = sectionLabel("注册密码");
+        passLabel.setBounds(92, 184, 84, 28);
+        root.add(passLabel);
 
-        // ── 4. 密码输入框 ──
         passField = new JPasswordField();
         styleTextField(passField);
         passField.setEchoChar('●');
-        passField.setBounds(195, 170, 200, 32);
-        add(passField);
+        passField.setBounds(198, 180, 200, 32);
+        root.add(passField);
 
-        // ── 5. 确认密码图标 ──
-        JLabel confirmPassIcon = makeIcon(IMG + "再次输入密码.png", 96, 17);
-        confirmPassIcon.setBounds(68, 234, 96, 17);
-        add(confirmPassIcon);
+        JLabel confirmLabel = sectionLabel("再次输入密码");
+        confirmLabel.setBounds(60, 246, 116, 28);
+        root.add(confirmLabel);
 
-        // ── 6. 确认密码输入框 ──
         confirmPassField = new JPasswordField();
         styleTextField(confirmPassField);
         confirmPassField.setEchoChar('●');
-        confirmPassField.setBounds(195, 226, 200, 32);
-        add(confirmPassField);
+        confirmPassField.setBounds(198, 242, 200, 32);
+        root.add(confirmPassField);
 
-        // ── 7. 注册按钮 ──
-        registerBtn = makeImageButton(IMG + "注册按钮.png", IMG + "注册按下.png", 128, 47, () -> doRegister());
-        registerBtn.setBounds(80, 298, 128, 47);
-        add(registerBtn);
+        ThemedButton registerBtn = new ThemedButton("注册", true);
+        registerBtn.setBounds(96, 312, 132, 46);
+        registerBtn.addActionListener(e -> doRegister());
+        root.add(registerBtn);
 
-        // ── 8. 重置按钮 ──
-        resetBtn = makeImageButton(IMG + "重置按钮.png", IMG + "重置按下.png", 128, 47, () -> doReset());
-        resetBtn.setBounds(260, 298, 128, 47);
-        add(resetBtn);
+        ThemedButton resetBtn = new ThemedButton("重置", false);
+        resetBtn.setBounds(260, 312, 132, 46);
+        resetBtn.addActionListener(e -> doReset());
+        root.add(resetBtn);
 
-        // ── 9. 返回登录按钮（使用统一样式的小型按钮）──
-        JLabel backBtn = makeStyledLabelButton("返回登录", 90, 30, () -> {
+        ThemedButton backBtn = new ThemedButton("返回登录", false);
+        backBtn.setFont(GameStyle.getFont(Font.BOLD, 13));
+        backBtn.setBounds(16, 18, 96, 32);
+        backBtn.addActionListener(e -> {
             this.setVisible(false);
             this.dispose();
             new LoginFrame();
         });
-        backBtn.setBounds(12, 12, 92, 30);
-        add(backBtn);
-
-        // ── 10. 背景图（最后添加，渲染在最底层）──
-        JLabel bg = new JLabel(loadScaled(IMG + "background.png", 470, 390));
-        bg.setBounds(0, 0, 470, 390);
-        add(bg);
+        root.add(backBtn);
     }
 
-    // ── 注册逻辑 ──────────────────────────────────────────
+    private JLabel sectionLabel(String text) {
+        JLabel label = new JLabel(text, SwingConstants.RIGHT);
+        label.setFont(GameStyle.getFont(Font.BOLD, 15));
+        label.setForeground(themeTextColor());
+        return label;
+    }
+
     private void doRegister() {
         String user = userField.getText().trim();
         String pass = new String(passField.getPassword()).trim();
@@ -140,28 +118,70 @@ public class RegisterFrame extends JFrame {
             showMsg(this, "两次输入的密码不一致！", "错误");
             return;
         }
-
-        // 验证用户名是否已被占用
         if (LoginFrame.userDatabase.containsKey(user)) {
             showMsg(this, "用户名已存在，请直接登录或换一个用户名！", "提示");
             return;
         }
 
-        // 保存注册的用户信息
         LoginFrame.userDatabase.put(user, pass);
-
-        // 模拟注册成功
         showMsg(this, "注册成功！马上为您跳转到登录界面", "成功");
         this.setVisible(false);
         this.dispose();
         new LoginFrame();
     }
 
-    // ── 重置逻辑 ──────────────────────────────────────────
     private void doReset() {
         userField.setText("");
         passField.setText("");
         confirmPassField.setText("");
         userField.requestFocus();
+    }
+
+    private void registerQuickStart() {
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(e -> {
+            if (!RegisterFrame.this.isShowing()) {
+                return false;
+            }
+            if (e.getID() == KeyEvent.KEY_PRESSED && e.isShiftDown() && e.getKeyCode() == KeyEvent.VK_A) {
+                RegisterFrame.this.setVisible(false);
+                RegisterFrame.this.dispose();
+                new SetupFrame("admin");
+                return true;
+            }
+            return false;
+        });
+    }
+
+    private static class ThemedButton extends JButton {
+        private final boolean primary;
+
+        ThemedButton(String text, boolean primary) {
+            super(text);
+            this.primary = primary;
+            setFont(GameStyle.getFont(Font.BOLD, 18));
+            setForeground(Color.WHITE);
+            setContentAreaFilled(false);
+            setFocusPainted(false);
+            setBorderPainted(false);
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            boolean pressed = getModel().isPressed();
+            boolean rollover = getModel().isRollover();
+            Color[] colors = themeButtonColors(primary, pressed, rollover);
+            g2.setColor(new Color(0, 0, 0, 45));
+            g2.fillRoundRect(4, 5, getWidth() - 8, getHeight() - 8, 16, 16);
+            g2.setPaint(new GradientPaint(0, 1, colors[0], 0, getHeight() - 4, colors[1]));
+            g2.fillRoundRect(1, 1, getWidth() - 4, getHeight() - 6, 16, 16);
+            g2.setColor(colors[2]);
+            g2.setStroke(new BasicStroke(2f));
+            g2.drawRoundRect(1, 1, getWidth() - 4, getHeight() - 6, 16, 16);
+            g2.dispose();
+            super.paintComponent(g);
+        }
     }
 }

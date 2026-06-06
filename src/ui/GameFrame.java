@@ -145,11 +145,16 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
             g2.fillRoundRect(2, 3, w - 4, h - 4, 12, 12);
 
             // 2. 根据选中与否及触发状态选择 3D 渐变颜色
+            Color[] themeColors = GameStyle.themeButtonColors(isActiveState, pressed, rollover);
             Color top;
             Color bottom;
             Color border;
 
-            if (isActiveState) {
+            if (GameStyle.isUi2Theme()) {
+                top = themeColors[0];
+                bottom = themeColors[1];
+                border = themeColors[2];
+            } else if (isActiveState) {
                 // 亮眼森林绿 (激活状态，例如智能提示开启)
                 top = pressed ? new Color(0x32884A) : rollover ? new Color(0x52C271) : new Color(0x47B264);
                 bottom = pressed ? new Color(0x1E5E2F) : new Color(0x26773B);
@@ -1279,7 +1284,7 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
             if (!winAnimationPlayed) {
                 winAnimationPlayed = true;
                 if (winLabel != null) {
-                    winLabel.setIcon(getIcon("image/win.png", 256, 225));
+                    winLabel.setIcon(getIcon(GameStyle.themedPath("image/win.png", "image/UI2/win.png"), 256, 225));
                     winLabel.setBounds(242, -250, 256, 225); // 初始在屏幕上方边界外
 
                     if (winAnimationTimer != null && winAnimationTimer.isRunning()) {
@@ -1440,7 +1445,7 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         this.getContentPane().add(fullImageLabel);
 
         // 3. 底部控制栏面板（放在背景图的最下方外部，使用网格布局）
-        controlPanel = new RoundedPanel(new Color(253, 251, 247, 220), 20);
+        controlPanel = new RoundedPanel(GameStyle.isUi2Theme() ? new Color(255, 240, 247, 220) : new Color(253, 251, 247, 220), 20);
         controlPanel.setLayout(new java.awt.GridLayout(1, isChallengeMode ? 4 : 5, 10, 0));
         controlPanel.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
         controlPanel.setBounds(isChallengeMode ? 105 : 75, 752, isChallengeMode ? 530 : 590, 48);
@@ -1457,15 +1462,16 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         // 4. 步数统计标签
         stepCountLabel = new JLabel("游戏步数: 0");
         stepCountLabel.setFont(new Font("微软雅黑", Font.BOLD, 18));
-        stepCountLabel.setForeground(new Color(0x7B3A00));
+        stepCountLabel.setForeground(GameStyle.isUi2Theme() ? new Color(0x8B2F5B) : new Color(0x7B3A00));
         stepCountLabel.setBounds(100, 95, 200, 30);
         this.getContentPane().add(stepCountLabel);
 
         // 新增：计时标签
         timerLabel = new JLabel(isChallengeMode ? "挑战时间: 00:00" : "游戏时间: 00:00");
         timerLabel.setFont(new Font("微软雅黑", Font.BOLD, 18));
-        timerLabel.setForeground(new Color(0x7B3A00));
-        timerLabel.setBounds(350, 95, 200, 30);
+        timerLabel.setForeground(GameStyle.isUi2Theme() ? new Color(0x8B2F5B) : new Color(0x7B3A00));
+        timerLabel.setBounds(440, 95, 200, 30);
+        timerLabel.setHorizontalAlignment(SwingConstants.RIGHT);
         this.getContentPane().add(timerLabel);
 
         // 5. 拼图区域面板 (向上移动 20 像素)
@@ -1476,7 +1482,7 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         this.getContentPane().add(puzzlePanel);
 
         // 6. 背景图片标签 (最底层，向上移动 20 像素)
-        ImageIcon icon = getIcon("image/background.png", 660, 728);
+        ImageIcon icon = getIcon(GameStyle.themedPath("image/background.png", "image/UI2/background.png"), 660, 728);
         bgLabel = new JLabel(icon);
         bgLabel.setBounds(40, 20, 660, 728);
         this.getContentPane().add(bgLabel);

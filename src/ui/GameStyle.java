@@ -12,6 +12,7 @@ import java.awt.image.BufferedImage;
  * 集中管理颜色、字体、图标加载、按钮创建等通用逻辑，避免在各 Frame 中重复定义。
  */
 public final class GameStyle {
+    private static boolean ui2Theme = false;
 
     private GameStyle() {
         // 工具类不允许实例化
@@ -20,6 +21,60 @@ public final class GameStyle {
     // ═══════════════════════════════════════════════════════════
     // 颜色常量
     // ═══════════════════════════════════════════════════════════
+    public static boolean isUi2Theme() {
+        return ui2Theme;
+    }
+
+    public static void setUi2Theme(boolean enabled) {
+        ui2Theme = enabled;
+    }
+
+    public static String themedPath(String classicPath, String ui2Path) {
+        return ui2Theme ? ui2Path : classicPath;
+    }
+
+    public static Color themeTextColor() {
+        return ui2Theme ? new Color(0x8B2F5B) : TEXT_LIGHT_BROWN;
+    }
+
+    public static Color themeBorderColor() {
+        return ui2Theme ? new Color(0xDA6F9E) : BORDER_GOLD;
+    }
+
+    public static Color themeInputBackground() {
+        return ui2Theme ? new Color(0xFFF0F7) : new Color(0xFFFAE8);
+    }
+
+    public static Color[] themeButtonColors(boolean primary, boolean pressed, boolean rollover) {
+        if (ui2Theme) {
+            if (primary) {
+                return new Color[] {
+                        pressed ? new Color(0xCF4B86) : rollover ? new Color(0xFFA4C8) : new Color(0xF27AAA),
+                        pressed ? new Color(0xA32D66) : new Color(0xC7417B),
+                        new Color(0xFFF0F7)
+                };
+            }
+            return new Color[] {
+                    pressed ? new Color(0xB8427A) : rollover ? new Color(0xEE80B0) : new Color(0xD9689D),
+                    pressed ? new Color(0x7E2452) : new Color(0xA7386D),
+                    new Color(0x7B1B4C)
+            };
+        }
+
+        if (primary) {
+            return new Color[] {
+                    pressed ? new Color(0x32884A) : rollover ? new Color(0x52C271) : new Color(0x47B264),
+                    pressed ? new Color(0x1E5E2F) : new Color(0x26773B),
+                    new Color(0xF7CE5B)
+            };
+        }
+        return new Color[] {
+                pressed ? new Color(0xA56E33) : rollover ? new Color(0xDB9B4F) : new Color(0xCE893F),
+                pressed ? new Color(0x72431A) : new Color(0x7D4715),
+                new Color(0x5E3610)
+        };
+    }
+
     public static final Color TEXT_DARK        = new Color(0x5A3000);
     public static final Color TEXT_BROWN       = new Color(0x7B3A00);
     public static final Color TEXT_LIGHT_BROWN = new Color(0x6A3A10);
@@ -67,10 +122,10 @@ public final class GameStyle {
     public static void styleTextField(JTextField tf) {
         tf.setFont(getFont(Font.PLAIN, 14));
         tf.setForeground(TEXT_DARK);
-        tf.setBackground(new Color(0xFFFAE8, false));
+        tf.setBackground(themeInputBackground());
         tf.setCaretColor(CARET_BROWN);
         tf.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER_GOLD, 2, true),
+                BorderFactory.createLineBorder(themeBorderColor(), 2, true),
                 new EmptyBorder(2, 8, 2, 8)));
         tf.setOpaque(true);
     }
