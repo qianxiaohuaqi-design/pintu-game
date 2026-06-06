@@ -49,6 +49,10 @@ public class SetupFrame extends JFrame {
                 if (backgroundImage != null) {
                     g2.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), null);
                 }
+                // 遮挡背景图自带的 "拼图游戏" 木牌
+                g2.setColor(new Color(0xEED19C));
+                g2.fillRect(120, 0, 232, 45);
+
                 paintWoodTitle(g2, "拼图游戏设置", 86, 26, 300, 72, 27);
 
                 int boxHeight = modeSelected ? 230 : 110;
