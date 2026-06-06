@@ -42,31 +42,31 @@ public class RegisterFrame extends JFrame {
         setContentPane(root);
 
         JLabel userLabel = makeIcon("image/register/注册用户名.png", 79, 17);
-        userLabel.setBounds(101, 125, 79, 17);
+        userLabel.setBounds(95, 125, 79, 17);
         root.add(userLabel);
 
         userField = makeTextField("请输入注册的用户名");
-        userField.setBounds(198, 118, 200, 32);
+        userField.setBounds(192, 118, 200, 32);
         root.add(userField);
 
         JLabel passLabel = makeIcon("image/register/注册密码.png", 64, 16);
-        passLabel.setBounds(116, 188, 64, 16);
+        passLabel.setBounds(110, 188, 64, 16);
         root.add(passLabel);
 
         passField = new JPasswordField();
         styleTextField(passField);
         passField.setEchoChar('●');
-        passField.setBounds(198, 180, 200, 32);
+        passField.setBounds(192, 180, 200, 32);
         root.add(passField);
 
         JLabel confirmLabel = makeIcon("image/register/再次输入密码.png", 96, 17);
-        confirmLabel.setBounds(84, 249, 96, 17);
+        confirmLabel.setBounds(78, 249, 96, 17);
         root.add(confirmLabel);
 
         confirmPassField = new JPasswordField();
         styleTextField(confirmPassField);
         confirmPassField.setEchoChar('●');
-        confirmPassField.setBounds(198, 242, 200, 32);
+        confirmPassField.setBounds(192, 242, 200, 32);
         root.add(confirmPassField);
 
         JLabel registerBtn = makeImageButton("image/register/注册按钮.png", "image/register/注册按下.png", 128, 47, () -> doRegister());

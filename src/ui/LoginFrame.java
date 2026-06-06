@@ -51,25 +51,25 @@ public class LoginFrame extends JFrame {
         setContentPane(root);
 
         JLabel userLabel = makeIcon("image/login/用户名.png", 47, 17);
-        userLabel.setBounds(133, 153, 47, 17);
+        userLabel.setBounds(83, 153, 47, 17);
         root.add(userLabel);
 
         userField = makeTextField("请输入用户名");
-        userField.setBounds(198, 146, 200, 32);
+        userField.setBounds(148, 146, 200, 32);
         root.add(userField);
 
         JLabel passLabel = makeIcon("image/login/密码.png", 32, 16);
-        passLabel.setBounds(148, 222, 32, 16);
+        passLabel.setBounds(98, 222, 32, 16);
         root.add(passLabel);
 
         passField = new JPasswordField();
         styleTextField(passField);
         passField.setEchoChar('●');
-        passField.setBounds(198, 214, 190, 32);
+        passField.setBounds(148, 214, 190, 32);
         root.add(passField);
 
         passwordToggleBtn = new IconButton(() -> togglePasswordVisible());
-        passwordToggleBtn.setBounds(394, 208, 44, 44);
+        passwordToggleBtn.setBounds(344, 208, 44, 44);
         root.add(passwordToggleBtn);
 
         JLabel loginBtn = makeImageButton("image/login/登录按钮.png", "image/login/登录按下.png", 128, 47, () -> doLogin());
