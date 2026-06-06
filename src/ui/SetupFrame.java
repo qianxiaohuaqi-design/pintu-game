@@ -48,11 +48,12 @@ public class SetupFrame extends JFrame {
                 paintWoodFrameBackground(g2, getWidth(), getHeight());
                 paintWoodTitle(g2, "拼图游戏设置", 94, 26, 300, 72, 27);
 
+                int boxHeight = modeSelected ? 220 : 110;
                 g2.setColor(new Color(255, 255, 255, 110));
-                g2.fillRoundRect(58, 128, 372, 220, 22, 22);
+                g2.fillRoundRect(58, 128, 372, boxHeight, 22, 22);
                 g2.setColor(new Color(0xC79A55));
                 g2.setStroke(new BasicStroke(1.8f));
-                g2.drawRoundRect(58, 128, 372, 220, 22, 22);
+                g2.drawRoundRect(58, 128, 372, boxHeight, 22, 22);
                 g2.dispose();
             }
         };
@@ -98,7 +99,7 @@ public class SetupFrame extends JFrame {
         root.add(startGameBtn);
 
         backBtn = new ActionButton("返回登录", false);
-        backBtn.setBounds(306, 304, 132, 46);
+        backBtn.setBounds(178, 260, 132, 46);
         backBtn.addActionListener(e -> backToLogin());
         root.add(backBtn);
 
@@ -134,6 +135,7 @@ public class SetupFrame extends JFrame {
         btnCasual.setSelectedState(!challenge);
         btnChallenge.setSelectedState(challenge);
         setDifficultyAndStartVisible(true);
+        backBtn.setBounds(306, 304, 132, 46);
         this.getContentPane().revalidate();
         this.getContentPane().repaint();
     }

@@ -11,6 +11,8 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
+import java.awt.GradientPaint;
+import java.awt.BasicStroke;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -107,10 +109,7 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
 
     // 自定义现代化控制栏按钮
     static class ModernButton extends JButton {
-        private Color normalBg = new Color(0xC49A3C);
-        private Color hoverBg = new Color(0xD8A84A);
-        private Color activeBg = new Color(0xAB842F);
-        private Color currentBg = normalBg;
+        private boolean isActiveState = false;
 
         ModernButton(String text) {
             super(text);
@@ -122,45 +121,11 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
             setFocusable(false); // 避免按钮抢夺键盘焦点
             setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             setPreferredSize(new java.awt.Dimension(110, 34));
-
-            addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseEntered(MouseEvent e) {
-                    currentBg = hoverBg;
-                    repaint();
-                }
-
-                @Override
-                public void mouseExited(MouseEvent e) {
-                    currentBg = normalBg;
-                    repaint();
-                }
-
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    currentBg = activeBg;
-                    repaint();
-                }
-
-                @Override
-                public void mouseReleased(MouseEvent e) {
-                    currentBg = hoverBg;
-                    repaint();
-                }
-            });
+            setRolloverEnabled(true);
         }
 
         void setActive(boolean active) {
-            if (active) {
-                this.normalBg = new Color(0x3E8E41); // 森林绿
-                this.hoverBg = new Color(0x4CAF50);
-                this.activeBg = new Color(0x2E7D32);
-            } else {
-                this.normalBg = new Color(0xC49A3C); // 默认金色
-                this.hoverBg = new Color(0xD8A84A);
-                this.activeBg = new Color(0xAB842F);
-            }
-            this.currentBg = normalBg;
+            this.isActiveState = active;
             repaint();
         }
 
@@ -168,14 +133,63 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         protected void paintComponent(java.awt.Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(currentBg);
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 12, 12);
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+            int w = getWidth();
+            int h = getHeight();
+            boolean pressed = getModel().isPressed();
+            boolean rollover = getModel().isRollover();
+
+            // 1. 绘制投影阴影
+            g2.setColor(new Color(0, 0, 0, 42));
+            g2.fillRoundRect(2, 3, w - 4, h - 4, 12, 12);
+
+            // 2. 根据选中与否及触发状态选择 3D 渐变颜色
+            Color top;
+            Color bottom;
+            Color border;
+
+            if (isActiveState) {
+                // 亮眼森林绿 (激活状态，例如智能提示开启)
+                top = pressed ? new Color(0x1B5E20) : rollover ? new Color(0x4CAF50) : new Color(0x3E8E41);
+                bottom = pressed ? new Color(0x144D18) : new Color(0x27743A);
+                border = new Color(0xFFD700); // 金色发光边框
+            } else {
+                // 复古木质黄褐色 (默认状态)
+                top = pressed ? new Color(0x733E0F) : rollover ? new Color(0xD49245) : new Color(0xC68037);
+                bottom = pressed ? new Color(0x4A2508) : new Color(0x733E0F);
+                border = new Color(0x56300D); // 深木色边框
+            }
+
+            // 3. 填充主渐变色
+            GradientPaint bgGrad = new GradientPaint(0, 0, top, 0, h - 2, bottom);
+            g2.setPaint(bgGrad);
+            g2.fillRoundRect(1, 1, w - 3, h - 3, 10, 10);
+
+            // 4. 绘制边框
+            g2.setColor(border);
+            if (isActiveState) {
+                g2.setStroke(new BasicStroke(2.0f));
+            } else {
+                g2.setStroke(new BasicStroke(1.5f));
+            }
+            g2.drawRoundRect(1, 1, w - 3, h - 3, 10, 10);
+
+            // 5. 绘制上半部分的玻璃反光高光罩
+            if (!pressed) {
+                GradientPaint gloss = new GradientPaint(
+                        0, 1, new Color(255, 255, 255, 80),
+                        0, h / 2, new Color(255, 255, 255, 0)
+                );
+                g2.setPaint(gloss);
+                g2.fillRoundRect(2, 2, w - 5, h / 2 - 1, 8, 8);
+            }
+
             g2.dispose();
             super.paintComponent(g);
         }
     }
 
-    // 自定义带圆角的 JPanel
     static class RoundedPanel extends JPanel {
         private Color bgColor;
         private int roundRadius;
@@ -451,12 +465,17 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
                 + "  <div style='margin-bottom: 12px;'>"
                 + "    <span style='font-size: 14px; font-weight: bold; color: #7B3A00;'>【 快捷键指令 】</span><br>"
                 + "    <span style='padding-left: 8px; color: #6D3D00;'><b>A 键</b>：长按查看完整原图，松开恢复游戏。</span><br>"
-                + "    <span style='padding-left: 8px; color: #6D3D00;'><b>W 键</b>：一键自动完成拼图，直接触发通关。</span>"
+                + "    <span style='padding-left: 8px; color: #6D3D00;'><b>W 键</b>：一键自动完成拼图，直接触发通关（仅限休闲模式）。</span>"
                 + "  </div>"
-                + "  <div style='margin-bottom: 8px;'>"
+                + "  <div style='margin-bottom: 12px;'>"
                 + "    <span style='font-size: 14px; font-weight: bold; color: #7B3A00;'>【 核心功能 】</span><br>"
                 + "    <span style='padding-left: 8px; color: #6D3D00;'><b>智能提示</b>：高亮指明最优下一步。</span><br>"
                 + "    <span style='padding-left: 8px; color: #6D3D00;'><b>图片管理</b>：在已上传图片中，<b>左键点击</b>直接游戏，<b>右键点击</b>可重命名或删除图片。</span>"
+                + "  </div>"
+                + "  <div style='margin-bottom: 8px;'>"
+                + "    <span style='font-size: 14px; font-weight: bold; color: #7B3A00;'>【 排行榜与挑战规则 】</span><br>"
+                + "    <span style='padding-left: 8px; color: #6D3D00;'><b>记录条件</b>：只有在<b>挑战模式</b>下通关的成绩才会被记录到排行榜。</span><br>"
+                + "    <span style='padding-left: 8px; color: #6D3D00;'><b>规则限制</b>：挑战模式下将<b>禁用智能提示</b>，且<b>不能直接按 W 键</b>通关。为方便测试，可按 <b>Shift + W</b> 一键通关。</span>"
                 + "  </div>"
                 + "</div>"
                 + "</body>"
@@ -488,7 +507,7 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         mainPanel.add(centerPanel, BorderLayout.CENTER);
 
         dialog.setContentPane(mainPanel);
-        dialog.setSize(480, 420); // 调整窗口大小以获得完美的和谐视觉比率
+        dialog.setSize(480, 480); // 调整窗口大小以获得完美的和谐视觉比率
         dialog.setLocationRelativeTo(this);
         dialog.setAlwaysOnTop(true);
 
@@ -1489,6 +1508,10 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
 
         // 2. 作弊键：W 键 (KeyCode 87)
         if (keyCode == 87) {
+            // 挑战模式下禁用直接按 W，但支持按住 Shift + W 使用
+            if (isChallengeMode && !e.isShiftDown()) {
+                return;
+            }
             arr2 = new int[gridSize][gridSize];
             for (int i = 0; i < gridSize; i++) {
                 System.arraycopy(win[i], 0, arr2[i], 0, gridSize);
@@ -1498,7 +1521,6 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
             initImage();
             return;
         }
-
         // 判断游戏是否胜利，胜利后此方法直接结束，不能再执行下面的移动代码
         if (victory())
             return;
