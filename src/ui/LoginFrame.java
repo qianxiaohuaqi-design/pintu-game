@@ -50,16 +50,16 @@ public class LoginFrame extends JFrame {
         root.setOpaque(false);
         setContentPane(root);
 
-        JLabel userLabel = sectionLabel("用户名");
-        userLabel.setBounds(118, 150, 72, 28);
+        JLabel userLabel = makeIcon("image/login/用户名.png", 47, 17);
+        userLabel.setBounds(133, 153, 47, 17);
         root.add(userLabel);
 
         userField = makeTextField("请输入用户名");
         userField.setBounds(198, 146, 200, 32);
         root.add(userField);
 
-        JLabel passLabel = sectionLabel("密码");
-        passLabel.setBounds(132, 218, 58, 28);
+        JLabel passLabel = makeIcon("image/login/密码.png", 32, 16);
+        passLabel.setBounds(148, 222, 32, 16);
         root.add(passLabel);
 
         passField = new JPasswordField();
@@ -72,14 +72,12 @@ public class LoginFrame extends JFrame {
         passwordToggleBtn.setBounds(394, 208, 44, 44);
         root.add(passwordToggleBtn);
 
-        ThemedButton loginBtn = new ThemedButton("登录", true);
-        loginBtn.setBounds(96, 302, 132, 46);
-        loginBtn.addActionListener(e -> doLogin());
+        JLabel loginBtn = makeImageButton("image/login/登录按钮.png", "image/login/登录按下.png", 128, 47, () -> doLogin());
+        loginBtn.setBounds(96, 302, 128, 47);
         root.add(loginBtn);
 
-        ThemedButton registerBtn = new ThemedButton("注册", false);
-        registerBtn.setBounds(260, 302, 132, 46);
-        registerBtn.addActionListener(e -> doRegister());
+        JLabel registerBtn = makeImageButton("image/login/注册按钮.png", "image/login/注册按下.png", 128, 47, () -> doRegister());
+        registerBtn.setBounds(252, 302, 128, 47);
         root.add(registerBtn);
     }
 

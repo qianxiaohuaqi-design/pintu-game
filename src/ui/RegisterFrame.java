@@ -41,16 +41,16 @@ public class RegisterFrame extends JFrame {
         root.setOpaque(false);
         setContentPane(root);
 
-        JLabel userLabel = sectionLabel("注册用户名");
-        userLabel.setBounds(78, 122, 98, 28);
+        JLabel userLabel = makeIcon("image/register/注册用户名.png", 79, 17);
+        userLabel.setBounds(101, 125, 79, 17);
         root.add(userLabel);
 
         userField = makeTextField("请输入注册的用户名");
         userField.setBounds(198, 118, 200, 32);
         root.add(userField);
 
-        JLabel passLabel = sectionLabel("注册密码");
-        passLabel.setBounds(92, 184, 84, 28);
+        JLabel passLabel = makeIcon("image/register/注册密码.png", 64, 16);
+        passLabel.setBounds(116, 188, 64, 16);
         root.add(passLabel);
 
         passField = new JPasswordField();
@@ -59,8 +59,8 @@ public class RegisterFrame extends JFrame {
         passField.setBounds(198, 180, 200, 32);
         root.add(passField);
 
-        JLabel confirmLabel = sectionLabel("再次输入密码");
-        confirmLabel.setBounds(60, 246, 116, 28);
+        JLabel confirmLabel = makeIcon("image/register/再次输入密码.png", 96, 17);
+        confirmLabel.setBounds(84, 249, 96, 17);
         root.add(confirmLabel);
 
         confirmPassField = new JPasswordField();
@@ -69,14 +69,12 @@ public class RegisterFrame extends JFrame {
         confirmPassField.setBounds(198, 242, 200, 32);
         root.add(confirmPassField);
 
-        ThemedButton registerBtn = new ThemedButton("注册", true);
-        registerBtn.setBounds(96, 312, 132, 46);
-        registerBtn.addActionListener(e -> doRegister());
+        JLabel registerBtn = makeImageButton("image/register/注册按钮.png", "image/register/注册按下.png", 128, 47, () -> doRegister());
+        registerBtn.setBounds(96, 312, 128, 47);
         root.add(registerBtn);
 
-        ThemedButton resetBtn = new ThemedButton("重置", false);
-        resetBtn.setBounds(260, 312, 132, 46);
-        resetBtn.addActionListener(e -> doReset());
+        JLabel resetBtn = makeImageButton("image/register/重置按钮.png", "image/register/重置按下.png", 128, 47, () -> doReset());
+        resetBtn.setBounds(260, 312, 128, 47);
         root.add(resetBtn);
 
         ThemedButton backBtn = new ThemedButton("返回登录", false);
