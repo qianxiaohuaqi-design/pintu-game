@@ -476,7 +476,7 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
                 + "  <div style='margin-bottom: 8px;'>"
                 + "    <span style='font-size: 14px; font-weight: bold; color: #7B3A00;'>【 排行榜与挑战规则 】</span><br>"
                 + "    <span style='padding-left: 8px; color: #6D3D00;'><b>记录条件</b>：只有在<b>挑战模式</b>下通关的成绩才会被记录到排行榜。</span><br>"
-                + "    <span style='padding-left: 8px; color: #6D3D00;'><b>规则限制</b>：挑战模式下将<b>禁用智能提示</b>，且<b>不能直接按 W 键</b>通关。</span>"
+                + "    <span style='padding-left: 8px; color: #6D3D00;'>规则限制：挑战模式下将禁用智能提示，且不能直接按 W 键通关。</span>"
                 + "  </div>"
                 + "</div>"
                 + "</body>"
