@@ -183,20 +183,20 @@ public final class GameStyle {
         g2.fillRect(0, 0, width, height);
 
         g2.setColor(new Color(0xF8E58A));
-        g2.fillRoundRect(8, 8, width - 24, height - 46, 28, 28);
+        g2.fillRoundRect(8, 8, width - 16, height - 16, 28, 28);
 
         g2.setColor(new Color(0xFFF1A5));
-        g2.fillRoundRect(28, 24, width - 64, height - 84, 28, 28);
+        g2.fillRoundRect(20, 20, width - 40, height - 40, 28, 28);
 
         g2.setStroke(new BasicStroke(9f));
         g2.setColor(new Color(0x9B5C18));
-        g2.drawRoundRect(8, 8, width - 24, height - 46, 28, 28);
+        g2.drawRoundRect(8, 8, width - 16, height - 16, 28, 28);
         g2.setStroke(new BasicStroke(5f));
         g2.setColor(new Color(0xCE9136));
-        g2.drawRoundRect(13, 13, width - 34, height - 56, 24, 24);
+        g2.drawRoundRect(13, 13, width - 26, height - 26, 24, 24);
         g2.setStroke(new BasicStroke(2f));
         g2.setColor(new Color(0x6C3B11));
-        g2.drawRoundRect(4, 4, width - 16, height - 38, 30, 30);
+        g2.drawRoundRect(4, 4, width - 8, height - 8, 30, 30);
 
         g2.setColor(new Color(0xD7, 0xA3, 0x46, 70));
         g2.fillOval(18, 50, 42, 42);

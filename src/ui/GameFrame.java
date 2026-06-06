@@ -151,14 +151,14 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
 
             if (isActiveState) {
                 // 亮眼森林绿 (激活状态，例如智能提示开启)
-                top = pressed ? new Color(0x1B5E20) : rollover ? new Color(0x4CAF50) : new Color(0x3E8E41);
-                bottom = pressed ? new Color(0x144D18) : new Color(0x27743A);
-                border = new Color(0xFFD700); // 金色发光边框
+                top = pressed ? new Color(0x45A760) : rollover ? new Color(0x9BEAB0) : new Color(0x82D095);
+                bottom = pressed ? new Color(0x2B7D42) : new Color(0x45A760);
+                border = new Color(0xF2C45A); // 金色发光边框
             } else {
                 // 复古木质黄褐色 (默认状态)
-                top = pressed ? new Color(0x733E0F) : rollover ? new Color(0xD49245) : new Color(0xC68037);
-                bottom = pressed ? new Color(0x4A2508) : new Color(0x733E0F);
-                border = new Color(0x56300D); // 深木色边框
+                top = pressed ? new Color(0xB88048) : rollover ? new Color(0xF0C987) : new Color(0xE5C290);
+                bottom = pressed ? new Color(0x956424) : new Color(0xB88048);
+                border = new Color(0x8A5F29); // 深木色边框
             }
 
             // 3. 填充主渐变色

@@ -31,7 +31,7 @@ public class SetupFrame extends JFrame {
 
     private void initFrame() {
         this.setTitle("拼图游戏 · 模式选择");
-        this.setSize(488, 430);
+        this.setSize(488, 420);
         this.setLocationRelativeTo(null);
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setAlwaysOnTop(true);
@@ -46,14 +46,14 @@ public class SetupFrame extends JFrame {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
                 paintWoodFrameBackground(g2, getWidth(), getHeight());
-                paintWoodTitle(g2, "拼图游戏设置", 94, 26, 300, 72, 27);
+                paintWoodTitle(g2, "拼图游戏设置", 86, 26, 300, 72, 27);
 
-                int boxHeight = modeSelected ? 220 : 110;
+                int boxHeight = modeSelected ? 230 : 110;
                 g2.setColor(new Color(255, 255, 255, 110));
-                g2.fillRoundRect(58, 128, 372, boxHeight, 22, 22);
+                g2.fillRoundRect(50, 128, 372, boxHeight, 22, 22);
                 g2.setColor(new Color(0xC79A55));
                 g2.setStroke(new BasicStroke(1.8f));
-                g2.drawRoundRect(58, 128, 372, boxHeight, 22, 22);
+                g2.drawRoundRect(50, 128, 372, boxHeight, 22, 22);
                 g2.dispose();
             }
         };
@@ -61,45 +61,45 @@ public class SetupFrame extends JFrame {
         setContentPane(root);
 
         JLabel modeLabel = createSectionLabel("选择模式");
-        modeLabel.setBounds(82, 156, 90, 28);
+        modeLabel.setBounds(74, 156, 85, 28);
         root.add(modeLabel);
 
         btnCasual = new ToggleButton("休闲模式");
-        btnCasual.setBounds(198, 152, 120, 40);
+        btnCasual.setBounds(167, 152, 112, 40);
         btnCasual.addActionListener(e -> selectMode(false));
         root.add(btnCasual);
 
         btnChallenge = new ToggleButton("挑战模式");
-        btnChallenge.setBounds(334, 152, 120, 40);
+        btnChallenge.setBounds(292, 152, 112, 40);
         btnChallenge.addActionListener(e -> selectMode(true));
         root.add(btnChallenge);
 
         difficultyLabel = createSectionLabel("选择难度");
-        difficultyLabel.setBounds(82, 224, 90, 28);
+        difficultyLabel.setBounds(74, 224, 85, 28);
         root.add(difficultyLabel);
 
         btn3x3 = new ToggleButton("3 x 3");
-        btn3x3.setBounds(198, 220, 78, 40);
+        btn3x3.setBounds(167, 220, 74, 40);
         btn3x3.addActionListener(e -> selectGridSize(3));
         root.add(btn3x3);
 
         btn4x4 = new ToggleButton("4 x 4");
-        btn4x4.setBounds(286, 220, 78, 40);
+        btn4x4.setBounds(251, 220, 74, 40);
         btn4x4.addActionListener(e -> selectGridSize(4));
         root.add(btn4x4);
 
         btn5x5 = new ToggleButton("5 x 5");
-        btn5x5.setBounds(374, 220, 78, 40);
+        btn5x5.setBounds(335, 220, 74, 40);
         btn5x5.addActionListener(e -> selectGridSize(5));
         root.add(btn5x5);
 
         startGameBtn = new ActionButton("开始游戏", true);
-        startGameBtn.setBounds(114, 304, 132, 46);
+        startGameBtn.setBounds(102, 302, 132, 46);
         startGameBtn.addActionListener(e -> startGame());
         root.add(startGameBtn);
 
         backBtn = new ActionButton("返回登录", false);
-        backBtn.setBounds(178, 260, 132, 46);
+        backBtn.setBounds(170, 260, 132, 46);
         backBtn.addActionListener(e -> backToLogin());
         root.add(backBtn);
 
@@ -135,7 +135,7 @@ public class SetupFrame extends JFrame {
         btnCasual.setSelectedState(!challenge);
         btnChallenge.setSelectedState(challenge);
         setDifficultyAndStartVisible(true);
-        backBtn.setBounds(306, 304, 132, 46);
+        backBtn.setBounds(254, 302, 132, 46);
         this.getContentPane().revalidate();
         this.getContentPane().repaint();
     }
@@ -198,13 +198,13 @@ public class SetupFrame extends JFrame {
             Color bottom;
             Color border;
             if (selectedState) {
-                top = pressed ? new Color(0x2D7E46) : rollover ? new Color(0x49B96A) : new Color(0x3FA65A);
-                bottom = pressed ? new Color(0x195A2C) : new Color(0x226A35);
-                border = new Color(0xF4C54F);
+                top = pressed ? new Color(0x45A760) : rollover ? new Color(0x9BEAB0) : new Color(0x82D095);
+                bottom = pressed ? new Color(0x2B7D42) : new Color(0x45A760);
+                border = new Color(0xF2C45A);
             } else {
-                top = pressed ? new Color(0xA26A2E) : rollover ? new Color(0xD99B48) : new Color(0xC9893B);
-                bottom = pressed ? new Color(0x6D3F16) : new Color(0x7B4718);
-                border = new Color(0x5B3512);
+                top = pressed ? new Color(0xB88048) : rollover ? new Color(0xF0C987) : new Color(0xE5C290);
+                bottom = pressed ? new Color(0x956424) : new Color(0xB88048);
+                border = new Color(0x8A5F29);
             }
 
             g2.setColor(new Color(0, 0, 0, 42));
@@ -256,11 +256,11 @@ public class SetupFrame extends JFrame {
             Color top;
             Color bottom;
             if (primary) {
-                top = pressed ? new Color(0x2F8A4B) : rollover ? new Color(0x46B867) : new Color(0x3BA35A);
-                bottom = pressed ? new Color(0x1C6034) : new Color(0x24703B);
+                top = pressed ? new Color(0x45A760) : rollover ? new Color(0x9BEAB0) : new Color(0x82D095);
+                bottom = pressed ? new Color(0x2B7D42) : new Color(0x45A760);
             } else {
-                top = pressed ? new Color(0xA67231) : rollover ? new Color(0xD6A054) : new Color(0xC28B43);
-                bottom = pressed ? new Color(0x704415) : new Color(0x86571E);
+                top = pressed ? new Color(0xB88048) : rollover ? new Color(0xF0C987) : new Color(0xE5C290);
+                bottom = pressed ? new Color(0x956424) : new Color(0xB88048);
             }
 
             g2.setColor(new Color(0, 0, 0, 45));
@@ -269,7 +269,7 @@ public class SetupFrame extends JFrame {
             g2.setPaint(new GradientPaint(0, 1, top, 0, h - 4, bottom));
             g2.fillRoundRect(1, 1, w - 4, h - 6, 16, 16);
 
-            g2.setColor(primary ? new Color(0xF4C54F) : new Color(0x5C3714));
+            g2.setColor(primary ? new Color(0xF2C45A) : new Color(0x8A5F29));
             g2.setStroke(new BasicStroke(2f));
             g2.drawRoundRect(1, 1, w - 4, h - 6, 16, 16);
 
