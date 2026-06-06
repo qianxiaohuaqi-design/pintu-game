@@ -8,6 +8,7 @@ import static ui.GameStyle.*;
 public class SetupFrame extends JFrame {
 
     private final String username;
+    private final Image backgroundImage = GameStyle.loadRaw("image/login/background.png").getImage();
 
     private int selectedGridSize = 4;
     private boolean isChallengeMode = false;
@@ -45,7 +46,9 @@ public class SetupFrame extends JFrame {
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
-                paintWoodFrameBackground(g2, getWidth(), getHeight());
+                if (backgroundImage != null) {
+                    g2.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), null);
+                }
                 paintWoodTitle(g2, "拼图游戏设置", 86, 26, 300, 72, 27);
 
                 int boxHeight = modeSelected ? 230 : 110;
@@ -198,13 +201,13 @@ public class SetupFrame extends JFrame {
             Color bottom;
             Color border;
             if (selectedState) {
-                top = pressed ? new Color(0x45A760) : rollover ? new Color(0x9BEAB0) : new Color(0x82D095);
-                bottom = pressed ? new Color(0x2B7D42) : new Color(0x45A760);
-                border = new Color(0xF2C45A);
+                top = pressed ? new Color(0x32884A) : rollover ? new Color(0x52C271) : new Color(0x47B264);
+                bottom = pressed ? new Color(0x1E5E2F) : new Color(0x26773B);
+                border = new Color(0xF7CE5B);
             } else {
-                top = pressed ? new Color(0xB88048) : rollover ? new Color(0xF0C987) : new Color(0xE5C290);
-                bottom = pressed ? new Color(0x956424) : new Color(0xB88048);
-                border = new Color(0x8A5F29);
+                top = pressed ? new Color(0xA56E33) : rollover ? new Color(0xDB9B4F) : new Color(0xCE893F);
+                bottom = pressed ? new Color(0x72431A) : new Color(0x7D4715);
+                border = new Color(0x5E3610);
             }
 
             g2.setColor(new Color(0, 0, 0, 42));
@@ -256,11 +259,11 @@ public class SetupFrame extends JFrame {
             Color top;
             Color bottom;
             if (primary) {
-                top = pressed ? new Color(0x45A760) : rollover ? new Color(0x9BEAB0) : new Color(0x82D095);
-                bottom = pressed ? new Color(0x2B7D42) : new Color(0x45A760);
+                top = pressed ? new Color(0x32884A) : rollover ? new Color(0x52C271) : new Color(0x47B264);
+                bottom = pressed ? new Color(0x1E5E2F) : new Color(0x26773B);
             } else {
-                top = pressed ? new Color(0xB88048) : rollover ? new Color(0xF0C987) : new Color(0xE5C290);
-                bottom = pressed ? new Color(0x956424) : new Color(0xB88048);
+                top = pressed ? new Color(0xA56E33) : rollover ? new Color(0xDB9B4F) : new Color(0xCE893F);
+                bottom = pressed ? new Color(0x72431A) : new Color(0x7D4715);
             }
 
             g2.setColor(new Color(0, 0, 0, 45));
@@ -269,7 +272,7 @@ public class SetupFrame extends JFrame {
             g2.setPaint(new GradientPaint(0, 1, top, 0, h - 4, bottom));
             g2.fillRoundRect(1, 1, w - 4, h - 6, 16, 16);
 
-            g2.setColor(primary ? new Color(0xF2C45A) : new Color(0x8A5F29));
+            g2.setColor(primary ? new Color(0xF7CE5B) : new Color(0x5E3610));
             g2.setStroke(new BasicStroke(2f));
             g2.drawRoundRect(1, 1, w - 4, h - 6, 16, 16);
 
