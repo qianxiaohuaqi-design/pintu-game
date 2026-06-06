@@ -206,12 +206,14 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
     int timeElapsed = 0;
     boolean timerStarted = false;
     boolean scoreSaved = false;
+    boolean casualResultShown = false;
 
     // 现代化横向大按钮
+    ModernButton backToModeBtn = new ModernButton("返回模式");
+    ModernButton leaderboardBtn = new ModernButton("排行榜");
     ModernButton replayBtn = new ModernButton("重新游戏");
     ModernButton changeImageBtn = new ModernButton("更换图片");
-    ModernButton hintBtn = new ModernButton("智能提示");
-    ModernButton leaderboardBtn = new ModernButton("排行榜");
+    ModernButton hintBtn;
     ModernButton reLoginBtn = new ModernButton("重新登录");
     ModernButton exitBtn = new ModernButton("退出游戏");
 
@@ -310,8 +312,10 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         this.setVisible(true);
 
         if (isFirstLaunch) {
-            showTutorialDialog();
-            isFirstLaunch = false;
+            SwingUtilities.invokeLater(() -> {
+                showTutorialDialog();
+                isFirstLaunch = false;
+            });
         } else {
             this.requestFocusInWindow();
         }
@@ -650,6 +654,10 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
     }
 
     private boolean showCustomConfirmDialog(String title, String message) {
+        return showGameConfirmDialog(title, message, "确定", "取消");
+    }
+
+    private boolean showGameConfirmDialog(String title, String message, String confirmText, String cancelText) {
         final boolean[] result = {false};
         CustomDialog dialog = new CustomDialog(this, title, 380, 180);
 
@@ -659,8 +667,8 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         msgLabel.setHorizontalAlignment(SwingConstants.CENTER);
         dialog.centerPanel.add(msgLabel, BorderLayout.CENTER);
 
-        ModernButton okBtn = new ModernButton("确定");
-        ModernButton cancelBtn = new ModernButton("取消");
+        ModernButton okBtn = new ModernButton(confirmText);
+        ModernButton cancelBtn = new ModernButton(cancelText);
 
         okBtn.addActionListener(e -> {
             result[0] = true;
@@ -839,12 +847,13 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
             return;
         }
 
+        fullImage = GameStyle.normalizePuzzleImage(fullImage, 540);
+
         // 动态分割
         int tilePixels = 540 / gridSize;
         int idx = 1;
         for (int i = 0; i < gridSize; i++) {
             for (int j = 0; j < gridSize; j++) {
-                // 原图固定是 540x540，等分切割
                 BufferedImage sub = fullImage.getSubimage(j * tilePixels, i * tilePixels, tilePixels, tilePixels);
                 // 缩放到最终渲染大小并转为 ImageIcon 存放
                 Image scaled = sub.getScaledInstance(tilePixels, tilePixels, Image.SCALE_SMOOTH);
@@ -1062,6 +1071,100 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         dialog.setVisible(true);
     }
 
+    private void showChallengeResultDialog(int seconds, int steps) {
+        CustomDialog dialog = new CustomDialog(this, "挑战成功", 420, 220);
+        dialog.centerPanel.setLayout(new BorderLayout());
+
+        int min = seconds / 60;
+        int sec = seconds % 60;
+        JLabel resultLabel = new JLabel("<html><div style='text-align:center; font-family:\"微软雅黑\"; color:#5A3000;'>"
+                + "<div style='font-size:17px; font-weight:bold; color:#27AE60; margin-bottom:10px;'>成绩已记录到排行榜</div>"
+                + "<div style='font-size:14px; line-height:1.8;'>通关用时：<b>" + String.format("%02d:%02d", min, sec) + "</b><br>"
+                + "总步数：<b>" + steps + "</b></div>"
+                + "</div></html>");
+        resultLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        dialog.centerPanel.add(resultLabel, BorderLayout.CENTER);
+
+        ModernButton leaderboardButton = new ModernButton("查看排行榜");
+        leaderboardButton.addActionListener(e -> {
+            dialog.dispose();
+            showLeaderboardDialog();
+        });
+
+        ModernButton replayButton = new ModernButton("重新游戏");
+        replayButton.addActionListener(e -> {
+            dialog.dispose();
+            restartCurrentGame();
+        });
+
+        dialog.btnPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 18, 0));
+        dialog.btnPanel.add(leaderboardButton);
+        dialog.btnPanel.add(replayButton);
+        dialog.setVisible(true);
+    }
+
+    private void showCasualResultDialog(int seconds, int steps) {
+        CustomDialog dialog = new CustomDialog(this, "拼图完成", 430, 230);
+        dialog.centerPanel.setLayout(new BorderLayout());
+
+        int min = seconds / 60;
+        int sec = seconds % 60;
+        JLabel resultLabel = new JLabel("<html><div style='text-align:center; font-family:\"微软雅黑\"; color:#5A3000;'>"
+                + "<div style='font-size:17px; font-weight:bold; color:#27AE60; margin-bottom:10px;'>恭喜完成拼图！</div>"
+                + "<div style='font-size:14px; line-height:1.8;'>用时：<b>" + String.format("%02d:%02d", min, sec) + "</b><br>"
+                + "总步数：<b>" + steps + "</b></div>"
+                + "</div></html>");
+        resultLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        dialog.centerPanel.add(resultLabel, BorderLayout.CENTER);
+
+        ModernButton modeButton = new ModernButton("返回模式");
+        modeButton.addActionListener(e -> {
+            dialog.dispose();
+            returnToModeSelection();
+        });
+
+        ModernButton replayButton = new ModernButton("重新游戏");
+        replayButton.addActionListener(e -> {
+            dialog.dispose();
+            restartCurrentGame();
+        });
+
+        dialog.btnPanel.setLayout(new java.awt.FlowLayout(java.awt.FlowLayout.CENTER, 22, 0));
+        dialog.btnPanel.add(modeButton);
+        dialog.btnPanel.add(replayButton);
+        dialog.setVisible(true);
+    }
+
+    private void stopGameTimers() {
+        if (gameTimer != null) {
+            gameTimer.stop();
+        }
+        if (breatheTimer != null) {
+            breatheTimer.stop();
+        }
+        if (winAnimationTimer != null) {
+            winAnimationTimer.stop();
+        }
+    }
+
+    private void returnToModeSelection() {
+        stopGameTimers();
+        this.setVisible(false);
+        this.dispose();
+        new SetupFrame(username);
+    }
+
+    private void restartCurrentGame() {
+        step = 0;
+        winAnimationPlayed = false;
+        scoreSaved = false;
+        casualResultShown = false;
+        resetTimer();
+        initData();
+        initImage();
+        this.requestFocusInWindow();
+    }
+
     private void initData() {
         // 1. 初始化为胜利（正确）盘面
         arr2 = new int[gridSize][gridSize];
@@ -1179,15 +1282,16 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
                 if (isChallengeMode && !scoreSaved) {
                     scoreSaved = true;
                     saveScore(username, gridSize, timeElapsed, step);
-                    SwingUtilities.invokeLater(() -> {
-                        showCustomMessageDialog("挑战成功", String.format("恭喜！通关用时: %d 秒，总步数: %d 步！成绩已记录到排行榜。", timeElapsed, step), "success");
-                        showLeaderboardDialog();
-                    });
+                    SwingUtilities.invokeLater(() -> showChallengeResultDialog(timeElapsed, step));
+                } else if (!isChallengeMode && !casualResultShown) {
+                    casualResultShown = true;
+                    SwingUtilities.invokeLater(() -> showCasualResultDialog(timeElapsed, step));
                 }
             }
         } else {
             // 未胜利时移走胜利横幅，并重置播放状态
             winAnimationPlayed = false;
+            casualResultShown = false;
             if (winLabel != null) {
                 winLabel.setBounds(242, -250, 256, 225);
             }
@@ -1232,18 +1336,15 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
 
     private void initControlBar() {
         // 给横向控制大按钮绑定点击事件
+        backToModeBtn.addActionListener(this);
+        leaderboardBtn.addActionListener(this);
         replayBtn.addActionListener(this);
         changeImageBtn.addActionListener(this);
-        hintBtn.addActionListener(this);
-        leaderboardBtn.addActionListener(this);
+        if (hintBtn != null) {
+            hintBtn.addActionListener(this);
+        }
         reLoginBtn.addActionListener(this);
         exitBtn.addActionListener(this);
-
-        // 如果是挑战模式，禁用智能提示
-        if (isChallengeMode) {
-            hintBtn.setEnabled(false);
-            hintBtn.setToolTipText("挑战模式下禁用智能提示！");
-        }
 
         // 设置下拉弹出菜单样式与字体
         changeImagePopupMenu.setBackground(new Color(0xFDFBF7));
@@ -1293,6 +1394,10 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         winLabel = new JLabel();
         winLabel.setBounds(242, -250, 256, 225);
         this.getContentPane().add(winLabel);
+        backToModeBtn.setBounds(52, 52, 104, 34);
+        this.getContentPane().add(backToModeBtn);
+        leaderboardBtn.setBounds(584, 52, 104, 34);
+        this.getContentPane().add(leaderboardBtn);
 
         // 2. 原图查看层 (向上移动 20 像素)
         fullImageLabel = new JLabel();
@@ -1302,13 +1407,15 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
 
         // 3. 底部控制栏面板（放在背景图的最下方外部，使用网格布局）
         controlPanel = new RoundedPanel(new Color(253, 251, 247, 220), 20);
-        controlPanel.setLayout(new java.awt.GridLayout(1, 6, 8, 0));
+        controlPanel.setLayout(new java.awt.GridLayout(1, isChallengeMode ? 4 : 5, 10, 0));
         controlPanel.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
-        controlPanel.setBounds(50, 752, 640, 48);
+        controlPanel.setBounds(isChallengeMode ? 105 : 75, 752, isChallengeMode ? 530 : 590, 48);
         controlPanel.add(replayBtn);
         controlPanel.add(changeImageBtn);
-        controlPanel.add(hintBtn);
-        controlPanel.add(leaderboardBtn);
+        if (!isChallengeMode) {
+            hintBtn = new ModernButton("智能提示");
+            controlPanel.add(hintBtn);
+        }
         controlPanel.add(reLoginBtn);
         controlPanel.add(exitBtn);
         this.getContentPane().add(controlPanel);
@@ -1496,32 +1603,32 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
     public void actionPerformed(ActionEvent e) {
         // 当前被点击的条目对象
         Object source = e.getSource();
-        if (source == replayBtn) {
-            step = 0;
-            winAnimationPlayed = false; // 重置胜利动画状态
-            scoreSaved = false;
-            resetTimer();
-            initData();
-            initImage();
-        } else if (source == exitBtn) {
-            System.exit(0);
-        } else if (source == reLoginBtn) {
-            this.setVisible(false);
-            this.dispose();
-            if (gameTimer != null) {
-                gameTimer.stop();
+        if (source == backToModeBtn) {
+            if (showGameConfirmDialog("返回模式", "确定要返回模式选择吗？\n当前进度不会保留。", "返回模式", "取消")) {
+                returnToModeSelection();
             }
-            new LoginFrame();
         } else if (source == leaderboardBtn) {
             showLeaderboardDialog();
+        } else if (source == replayBtn) {
+            if (showGameConfirmDialog("重新游戏", "确定要重新开始当前拼图吗？", "重新游戏", "取消")) {
+                restartCurrentGame();
+            }
+        } else if (source == exitBtn) {
+            if (showGameConfirmDialog("退出游戏", "确定要退出拼图游戏吗？", "退出游戏", "取消")) {
+                stopGameTimers();
+                System.exit(0);
+            }
+        } else if (source == reLoginBtn) {
+            if (showGameConfirmDialog("重新登录", "确定要返回登录界面吗？\n当前进度不会保留。", "重新登录", "取消")) {
+                stopGameTimers();
+                this.setVisible(false);
+                this.dispose();
+                new LoginFrame();
+            }
         } else if (source == changeImageBtn) {
             // 在按钮正下方弹出下拉菜单
             changeImagePopupMenu.show(changeImageBtn, 0, changeImageBtn.getHeight());
-        } else if (source == hintBtn) {
-            if (isChallengeMode) {
-                showCustomMessageDialog("提示", "挑战模式下禁用智能提示！", "error");
-                return;
-            }
+        } else if (hintBtn != null && source == hintBtn) {
             isHintEnabled = !isHintEnabled;
             hintBtn.setActive(isHintEnabled);
             if (isHintEnabled) {

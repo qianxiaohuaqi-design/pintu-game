@@ -1,10 +1,11 @@
 package ui;
 
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.*;
 import java.util.Random;
+
+import static ui.GameStyle.*;
 
 public class LoginFrame extends JFrame {
 
@@ -14,6 +15,7 @@ public class LoginFrame extends JFrame {
     private JTextField     codeField;
     private JLabel         codeLabel;     // 显示验证码文字
     private JLabel         eyeLabel;      // 显示/隐藏密码
+    private boolean        passwordVisible = false;
 
     private JLabel loginBtn;
     private JLabel registerBtn;
@@ -68,15 +70,11 @@ public class LoginFrame extends JFrame {
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setAlwaysOnTop(true);
         this.setResizable(false);
-        // 使用 null 布局以精确定位（与 GameFrame 一致）
         this.getContentPane().setLayout(null);
     }
 
     // ── 布局所有组件 ──────────────────────────────────────
     private void initComponents() {
-        // 窗口客户区：488×430（去掉标题栏约 30px → 内容区约 400 高）
-        // background.png 实际像素：469×421，缩放填满整个内容区
-
         // ── 1. 用户名图标 ──
         JLabel userIcon = makeIcon(IMG + "用户名.png", 47, 17);
         userIcon.setBounds(116, 135, 47, 17);
@@ -95,31 +93,15 @@ public class LoginFrame extends JFrame {
         // ── 4. 密码输入框 ──
         passField = new JPasswordField();
         styleTextField(passField);
-        passField.setEchoChar('●');
-        passField.setBounds(195, 187, 200, 32);
+        passField.setEchoChar('●'); // 默认用圆点遮盖密码
+        passField.setBounds(195, 187, 190, 32);
         add(passField);
 
-        // ── 5. 显示密码眼睛按钮 ──
-        eyeLabel = makeIcon(IMG + "显示密码.png", 18, 29);
-        eyeLabel.setBounds(400, 188, 18, 29);
-        eyeLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        eyeLabel.addMouseListener(new MouseAdapter() {
-            boolean showing = false;
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                if (SwingUtilities.isLeftMouseButton(e) && eyeLabel.contains(e.getPoint())) {
-                    showing = !showing;
-                    passField.setEchoChar(showing ? (char) 0 : '●');
-                    String imgPath = showing ? IMG + "显示密码按下.png" : IMG + "显示密码.png";
-                    eyeLabel.setIcon(loadScaled(imgPath, showing ? 21 : 18, showing ? 32 : 29));
-                    if (showing) {
-                        eyeLabel.setBounds(398, 187, 21, 32);
-                    } else {
-                        eyeLabel.setBounds(400, 188, 18, 29);
-                    }
-                }
-            }
-        });
+        // ── 5. 显示/隐藏密码按钮 ──
+        eyeLabel = makeStyledLabelButton("显", 42, 32, () -> togglePasswordVisible());
+        eyeLabel.setFont(GameStyle.getFont(Font.BOLD, 14));
+        eyeLabel.setBounds(392, 187, 42, 32);
+        eyeLabel.setToolTipText("显示或隐藏密码");
         add(eyeLabel);
 
         // ── 6. 验证码图标 ──
@@ -135,11 +117,11 @@ public class LoginFrame extends JFrame {
         // ── 8. 验证码显示标签（点击刷新）──
         currentCode = generateCode();
         codeLabel = new JLabel(currentCode);
-        codeLabel.setFont(new Font("微软雅黑", Font.BOLD, 18));
-        codeLabel.setForeground(new Color(0x7B3A00));
+        codeLabel.setFont(GameStyle.getFont(Font.BOLD, 18));
+        codeLabel.setForeground(TEXT_BROWN);
         codeLabel.setOpaque(true);
-        codeLabel.setBackground(new Color(0xFFF5D0));
-        codeLabel.setBorder(BorderFactory.createLineBorder(new Color(0xC49A3C), 2, true));
+        codeLabel.setBackground(CODE_BG);
+        codeLabel.setBorder(BorderFactory.createLineBorder(BORDER_GOLD, 2, true));
         codeLabel.setHorizontalAlignment(SwingConstants.CENTER);
         codeLabel.setBounds(305, 247, 90, 32);
         codeLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -156,12 +138,12 @@ public class LoginFrame extends JFrame {
         add(codeLabel);
 
         // ── 9. 登录按钮 ──
-        loginBtn = makeButton(IMG + "登录按钮.png", IMG + "登录按下.png", 128, 47, () -> doLogin());
+        loginBtn = makeImageButton(IMG + "登录按钮.png", IMG + "登录按下.png", 128, 47, () -> doLogin());
         loginBtn.setBounds(80, 310, 128, 47);
         add(loginBtn);
 
         // ── 10. 注册按钮 ──
-        registerBtn = makeButton(IMG + "注册按钮.png", IMG + "注册按下.png", 128, 47, () -> doRegister());
+        registerBtn = makeImageButton(IMG + "注册按钮.png", IMG + "注册按下.png", 128, 47, () -> doRegister());
         registerBtn.setBounds(260, 310, 128, 47);
         add(registerBtn);
 
@@ -178,15 +160,15 @@ public class LoginFrame extends JFrame {
         String code = codeField.getText().trim();
 
         if (user.isEmpty()) {
-            showMsg("请输入用户名！", "提示");
+            showMsg(this, "请输入用户名！", "提示");
             return;
         }
         if (pass.isEmpty()) {
-            showMsg("请输入密码！", "提示");
+            showMsg(this, "请输入密码！", "提示");
             return;
         }
         if (!code.equalsIgnoreCase(currentCode)) {
-            showMsg("验证码错误，请重新输入！", "验证码错误");
+            showMsg(this, "验证码错误，请重新输入！", "验证码错误");
             currentCode = generateCode();
             codeLabel.setText(currentCode);
             codeField.setText("");
@@ -194,15 +176,15 @@ public class LoginFrame extends JFrame {
         }
         // 验证用户名和密码
         if (!userDatabase.containsKey(user)) {
-            showMsg("用户名不存在，请先注册！", "提示");
+            showMsg(this, "用户名不存在，请先注册！", "提示");
             return;
         }
         if (!userDatabase.get(user).equals(pass)) {
-            showMsg("密码错误，请重新输入！", "提示");
+            showMsg(this, "密码错误，请重新输入！", "提示");
             return;
         }
 
-        showMsg("登录成功！欢迎：" + user, "登录成功");
+        showMsg(this, "登录成功！欢迎：" + user, "登录成功");
         this.setVisible(false);
         this.dispose();
         new SetupFrame(user);
@@ -212,6 +194,12 @@ public class LoginFrame extends JFrame {
     private void doRegister() {
         this.setVisible(false);
         new RegisterFrame();
+    }
+
+    private void togglePasswordVisible() {
+        passwordVisible = !passwordVisible;
+        passField.setEchoChar(passwordVisible ? (char) 0 : '●');
+        eyeLabel.setText(passwordVisible ? "隐" : "显");
     }
 
     // ── 工具方法 ──────────────────────────────────────────
@@ -225,95 +213,5 @@ public class LoginFrame extends JFrame {
             sb.append(chars.charAt(rnd.nextInt(chars.length())));
         }
         return sb.toString();
-    }
-
-    /** 创建带占位提示的文本框 */
-    private JTextField makeTextField(String placeholder) {
-        JTextField tf = new JTextField() {
-            @Override protected void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                if (getText().isEmpty() && !isFocusOwner()) {
-                    g.setColor(new Color(0xAA9070));
-                    g.setFont(new Font("微软雅黑", Font.PLAIN, 12));
-                    Insets ins = getInsets();
-                    g.drawString(placeholder, ins.left + 4, getHeight() / 2 + 5);
-                }
-            }
-        };
-        styleTextField(tf);
-        return tf;
-    }
-
-    /** 统一输入框样式 */
-    private void styleTextField(JTextField tf) {
-        tf.setFont(new Font("微软雅黑", Font.PLAIN, 14));
-        tf.setForeground(new Color(0x5A3000));
-        tf.setBackground(new Color(0xFFFAE8, false));
-        tf.setCaretColor(new Color(0x7B3A00));
-        tf.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(0xC49A3C), 2, true),
-                new EmptyBorder(2, 8, 2, 8)
-        ));
-        tf.setOpaque(true);
-    }
-
-    /** 加载并缩放图标为 JLabel */
-    private JLabel makeIcon(String path, int w, int h) {
-        JLabel lbl = new JLabel(loadScaled(path, w, h));
-        lbl.setOpaque(false);
-        return lbl;
-    }
-
-    /** 创建可按压效果的按钮 JLabel */
-    private JLabel makeButton(String normalPath, String pressedPath, int w, int h, Runnable action) {
-        ImageIcon normalIcon  = loadScaled(normalPath, w, h);
-        ImageIcon pressedIcon = loadScaled(pressedPath, w, h);
-        JLabel btn = new JLabel(normalIcon);
-        btn.setOpaque(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btn.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                if (SwingUtilities.isLeftMouseButton(e)) {
-                    btn.setIcon(pressedIcon);
-                }
-            }
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                if (SwingUtilities.isLeftMouseButton(e)) {
-                    btn.setIcon(normalIcon);
-                    if (action != null && btn.contains(e.getPoint())) {
-                        action.run();
-                    }
-                }
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                btn.setIcon(normalIcon);
-            }
-        });
-        return btn;
-    }
-
-    /** 加载图片并缩放到指定尺寸 */
-    private ImageIcon loadScaled(String path, int w, int h) {
-        java.net.URL url = this.getClass().getResource("/" + path);
-        ImageIcon raw;
-        if (url != null) {
-            raw = new ImageIcon(url);
-        } else {
-            raw = new ImageIcon(path);
-        }
-        if (raw.getIconWidth() <= 0) {
-            // 图片加载失败时返回空图标
-            return new ImageIcon();
-        }
-        Image scaled = raw.getImage().getScaledInstance(w, h, Image.SCALE_SMOOTH);
-        return new ImageIcon(scaled);
-    }
-
-    /** 弹出信息对话框 */
-    private void showMsg(String msg, String title) {
-        JOptionPane.showMessageDialog(this, msg, title, JOptionPane.INFORMATION_MESSAGE);
     }
 }
