@@ -265,6 +265,7 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
     double animTime = 0.0;
     JLabel winLabel;
     boolean winAnimationPlayed = false;
+    Timer victoryDialogTimer;
 
     // 定义变量
     int step = 0;
@@ -1164,6 +1165,9 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
         if (winAnimationTimer != null) {
             winAnimationTimer.stop();
         }
+        if (victoryDialogTimer != null) {
+            victoryDialogTimer.stop();
+        }
     }
 
     private void returnToModeSelection() {
@@ -1174,6 +1178,9 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
     }
 
     private void restartCurrentGame() {
+        if (victoryDialogTimer != null) {
+            victoryDialogTimer.stop();
+        }
         step = 0;
         winAnimationPlayed = false;
         scoreSaved = false;
@@ -1289,7 +1296,7 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
                         }
                         double progress = easeOutElastic(animTime);
                         int startY = -250;
-                        int targetY = 317;
+                        int targetY = 80;
                         int currentY = (int) (startY + (targetY - startY) * progress);
                         winLabel.setBounds(242, currentY, 256, 225);
                         this.getContentPane().repaint();
@@ -1301,10 +1308,18 @@ public class GameFrame extends JFrame implements KeyListener, ActionListener {
                 if (isChallengeMode && !scoreSaved) {
                     scoreSaved = true;
                     saveScore(username, gridSize, timeElapsed, step);
-                    SwingUtilities.invokeLater(() -> showChallengeResultDialog(timeElapsed, step));
+                    victoryDialogTimer = new Timer(1200, e1 -> {
+                        showChallengeResultDialog(timeElapsed, step);
+                    });
+                    victoryDialogTimer.setRepeats(false);
+                    victoryDialogTimer.start();
                 } else if (!isChallengeMode && !casualResultShown) {
                     casualResultShown = true;
-                    SwingUtilities.invokeLater(() -> showCasualResultDialog(timeElapsed, step));
+                    victoryDialogTimer = new Timer(1200, e1 -> {
+                        showCasualResultDialog(timeElapsed, step);
+                    });
+                    victoryDialogTimer.setRepeats(false);
+                    victoryDialogTimer.start();
                 }
             }
         } else {
