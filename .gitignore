@@ -31,3 +31,13 @@ bin/
 
 # User Data
 leaderboard.txt
+image/custom/
+
+# Local scratch files
+scratch/
+*.class
+~$*.docx
+
+# Environment files
+.env
+.env.*
