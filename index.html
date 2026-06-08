@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>拼图游戏</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23f4b333'/%3E%3Cpath d='M19 14h15v11h11v15H34v10H19V40H9V25h10z' fill='%23fff2b8' stroke='%238d4b12' stroke-width='4'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./web/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero-panel">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Pintu Web</p>
+            <h1>拼图游戏</h1>
+          </div>
+          <div class="status-pill" id="databaseStatus">本地排行榜</div>
+        </div>
+
+        <div class="setup" id="setupPanel">
+          <label class="field">
+            <span>玩家名</span>
+            <input id="playerName" maxlength="16" placeholder="输入昵称" value="玩家" />
+          </label>
+          <div class="control-group">
+            <span>模式</span>
+            <div class="segmented" data-group="mode">
+              <button class="selected" data-mode="casual">休闲模式</button>
+              <button data-mode="challenge">挑战模式</button>
+            </div>
+          </div>
+          <div class="control-group">
+            <span>难度</span>
+            <div class="segmented" data-group="grid">
+              <button data-grid="3">3 x 3</button>
+              <button class="selected" data-grid="4">4 x 4</button>
+              <button data-grid="5">5 x 5</button>
+            </div>
+          </div>
+          <div class="control-group">
+            <span>图片</span>
+            <div class="segmented" data-group="image">
+              <button class="selected" data-image="cat1">小猫</button>
+              <button data-image="dog1">小狗</button>
+              <button data-image="emoji1">表情</button>
+            </div>
+          </div>
+          <button class="primary-action" id="startGame">开始游戏</button>
+        </div>
+      </section>
+
+      <section class="game-layout">
+        <div class="game-panel">
+          <div class="hud">
+            <button class="ghost-btn" id="backToSetup">返回设置</button>
+            <div class="hud-item">步数：<strong id="steps">0</strong></div>
+            <div class="hud-item">时间：<strong id="timer">00:00</strong></div>
+          </div>
+          <div class="board-frame">
+            <div class="board" id="board" aria-label="拼图棋盘"></div>
+          </div>
+          <div class="toolbar">
+            <button id="restartGame">重新游戏</button>
+            <button id="changeImage">更换图片</button>
+            <button id="hintButton">智能提示</button>
+          </div>
+        </div>
+
+        <aside class="side-panel">
+          <div class="preview-card">
+            <h2>原图</h2>
+            <img id="previewImage" src="./image/cat/cat1/all.jpg" alt="当前拼图原图" />
+          </div>
+          <div class="leaderboard-card">
+            <div class="leaderboard-title">
+              <h2>挑战排行榜</h2>
+              <select id="rankGrid" aria-label="排行榜难度">
+                <option value="3">3 x 3</option>
+                <option value="4" selected>4 x 4</option>
+                <option value="5">5 x 5</option>
+              </select>
+            </div>
+            <ol id="leaderboard"></ol>
+          </div>
+        </aside>
+      </section>
+    </main>
+
+    <dialog class="result-dialog" id="resultDialog">
+      <div class="dialog-card">
+        <h2 id="dialogTitle">拼图完成</h2>
+        <p id="dialogMessage"></p>
+        <div class="dialog-actions">
+          <button id="dialogRestart">重新游戏</button>
+          <button id="dialogClose" class="primary-action">继续查看</button>
+        </div>
+      </div>
+    </dialog>
+
+    <script type="module" src="./web/app.js"></script>
+  </body>
+</html>
