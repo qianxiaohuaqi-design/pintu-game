@@ -59,12 +59,32 @@ const hasSupabase = Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
 els.databaseStatus.textContent = hasSupabase ? "在线排行榜" : "本地排行榜";
 els.player.value = localStorage.getItem(STORAGE_KEYS.name) || "玩家";
 
-document.querySelector("#startGame").addEventListener("click", () => startGame());
+const views = {
+  lobby: document.querySelector("#setupPanel"),
+  game: document.querySelector(".game-layout")
+};
+
+function showView(viewName) {
+  Object.keys(views).forEach(key => {
+    if (key === viewName) {
+      views[key].classList.remove("view-hidden");
+      views[key].classList.add("view-active");
+    } else {
+      views[key].classList.add("view-hidden");
+      views[key].classList.remove("view-active");
+    }
+  });
+}
+
+document.querySelector("#startGame").addEventListener("click", () => {
+  startGame();
+  showView("game");
+});
 document.querySelector("#restartGame").addEventListener("click", () => startGame());
 document.querySelector("#backToSetup").addEventListener("click", () => {
   stopTimer();
   setPaused(false);
-  document.querySelector("#setupPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+  showView("lobby");
 });
 document.querySelector("#changeImage").addEventListener("click", () => {
   selectNextImage();
@@ -286,8 +306,7 @@ function updateBoardPositions() {
     if (!tile) return;
     const row = Math.floor(position / grid);
     const col = position % grid;
-    tile.style.setProperty("--row", row);
-    tile.style.setProperty("--col", col);
+    tile.style.transform = `translate(${col * 100}%, ${row * 100}%)`;
     tile.dataset.position = String(position);
   });
 }
