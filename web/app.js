@@ -12,6 +12,12 @@ const images = [
   { key: "emoji3", name: "可爱", src: "./image/emoji/emoji3/all.jpg" },
 ];
 
+const STORAGE_KEYS = {
+  name: "pintu-player-name",
+  muted: "pintu-muted",
+  scores: "pintu-scores",
+};
+
 const state = {
   grid: 4,
   mode: "casual",
@@ -21,6 +27,9 @@ const state = {
   seconds: 0,
   timerId: null,
   running: false,
+  paused: false,
+  muted: localStorage.getItem(STORAGE_KEYS.muted) === "true",
+  lastResult: null,
 };
 
 const els = {
@@ -32,38 +41,68 @@ const els = {
   player: document.querySelector("#playerName"),
   databaseStatus: document.querySelector("#databaseStatus"),
   leaderboard: document.querySelector("#leaderboard"),
-  rankGrid: document.querySelector("#rankGrid"),
+  imageGallery: document.querySelector("#imageGallery"),
+  imageName: document.querySelector("#imageName"),
+  modeLabel: document.querySelector("#modeLabel"),
+  gridLabel: document.querySelector("#gridLabel"),
+  gameTip: document.querySelector("#gameTip"),
+  pauseToggle: document.querySelector("#pauseToggle"),
+  pauseMask: document.querySelector("#pauseMask"),
+  muteToggle: document.querySelector("#muteToggle"),
   resultDialog: document.querySelector("#resultDialog"),
   dialogTitle: document.querySelector("#dialogTitle"),
   dialogMessage: document.querySelector("#dialogMessage"),
+  dialogStatus: document.querySelector("#dialogStatus"),
 };
 
 const hasSupabase = Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
 els.databaseStatus.textContent = hasSupabase ? "在线排行榜" : "本地排行榜";
+els.player.value = localStorage.getItem(STORAGE_KEYS.name) || "玩家";
 
 document.querySelector("#startGame").addEventListener("click", () => startGame());
 document.querySelector("#restartGame").addEventListener("click", () => startGame());
 document.querySelector("#backToSetup").addEventListener("click", () => {
   stopTimer();
-  document.querySelector("#setupPanel").scrollIntoView({ behavior: "smooth", block: "center" });
+  setPaused(false);
+  document.querySelector("#setupPanel").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 document.querySelector("#changeImage").addEventListener("click", () => {
-  state.imageIndex = (state.imageIndex + 1) % images.length;
+  selectNextImage();
   startGame();
 });
+document.querySelector("#randomImage").addEventListener("click", () => {
+  selectRandomImage();
+  updatePreview();
+});
 document.querySelector("#hintButton").addEventListener("click", showHint);
+document.querySelector("#pauseToggle").addEventListener("click", togglePause);
+document.querySelector("#muteToggle").addEventListener("click", toggleMute);
+document.querySelector("#shareResult").addEventListener("click", shareCurrentResult);
 document.querySelector("#dialogRestart").addEventListener("click", () => {
   els.resultDialog.close();
   startGame();
 });
+document.querySelector("#dialogChangeImage").addEventListener("click", () => {
+  els.resultDialog.close();
+  selectNextImage();
+  startGame();
+});
+document.querySelector("#dialogLeaderboard").addEventListener("click", () => {
+  els.resultDialog.close();
+  document.querySelector("#leaderboardPanel").scrollIntoView({ behavior: "smooth", block: "center" });
+});
 document.querySelector("#dialogClose").addEventListener("click", () => els.resultDialog.close());
-els.rankGrid.addEventListener("change", () => loadLeaderboard(Number(els.rankGrid.value)));
+els.player.addEventListener("input", () => {
+  localStorage.setItem(STORAGE_KEYS.name, sanitizeName(els.player.value));
+});
+els.board.addEventListener("keydown", handleBoardKeydown);
 
 document.querySelectorAll("[data-mode]").forEach((button) => {
   button.addEventListener("click", () => {
     selectButton("[data-mode]", button);
     state.mode = button.dataset.mode;
     updateModeControls();
+    updateHud();
   });
 });
 
@@ -71,42 +110,72 @@ document.querySelectorAll("[data-grid]").forEach((button) => {
   button.addEventListener("click", () => {
     selectButton("[data-grid]", button);
     state.grid = Number(button.dataset.grid);
-    els.rankGrid.value = String(state.grid);
+    selectButton("[data-rank-grid]", document.querySelector(`[data-rank-grid="${state.grid}"]`));
     loadLeaderboard(state.grid);
+    updateHud();
   });
 });
 
-document.querySelectorAll("[data-image]").forEach((button) => {
+document.querySelectorAll("[data-rank-grid]").forEach((button) => {
   button.addEventListener("click", () => {
-    selectButton("[data-image]", button);
-    const index = images.findIndex((image) => image.key === button.dataset.image);
-    state.imageIndex = Math.max(0, index);
-    updatePreview();
+    selectButton("[data-rank-grid]", button);
+    loadLeaderboard(Number(button.dataset.rankGrid));
   });
 });
+
+function renderImageGallery() {
+  els.imageGallery.innerHTML = "";
+  images.forEach((image, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = index === state.imageIndex ? "image-choice selected" : "image-choice";
+    button.dataset.imageIndex = String(index);
+    button.innerHTML = `<img src="${image.src}" alt="${image.name}" /><span>${image.name}</span>`;
+    button.addEventListener("click", () => {
+      state.imageIndex = index;
+      updatePreview();
+    });
+    els.imageGallery.append(button);
+  });
+}
 
 function selectButton(selector, selected) {
+  if (!selected) return;
   document.querySelectorAll(selector).forEach((button) => button.classList.remove("selected"));
   selected.classList.add("selected");
 }
 
 function updateModeControls() {
   els.hint.hidden = state.mode === "challenge";
+  els.gameTip.textContent =
+    state.mode === "challenge"
+      ? "挑战模式会提交成绩到排行榜，智能提示已关闭。"
+      : "休闲模式可以使用智能提示，通关不会写入排行榜。";
 }
 
-function startGame() {
+function startGame(silent = false) {
   stopTimer();
+  setPaused(false);
   state.steps = 0;
   state.seconds = 0;
   state.running = true;
+  state.lastResult = null;
   state.tiles = createSolvableTiles(state.grid);
   updateModeControls();
   updatePreview();
   renderBoard();
   updateHud();
+  startTimer();
+  els.board.focus({ preventScroll: true });
+  if (!silent) playTone(520, 0.06);
+}
+
+function startTimer() {
   state.timerId = window.setInterval(() => {
-    state.seconds += 1;
-    updateHud();
+    if (!state.paused) {
+      state.seconds += 1;
+      updateHud();
+    }
   }, 1000);
 }
 
@@ -116,6 +185,17 @@ function stopTimer() {
     state.timerId = null;
   }
   state.running = false;
+}
+
+function togglePause() {
+  if (!state.running) return;
+  setPaused(!state.paused);
+}
+
+function setPaused(paused) {
+  state.paused = paused;
+  els.pauseToggle.textContent = paused ? "继续" : "暂停";
+  els.pauseMask.hidden = !paused;
 }
 
 function createSolvableTiles(grid) {
@@ -153,7 +233,6 @@ function renderBoard() {
   const image = images[state.imageIndex];
   els.board.innerHTML = "";
   els.board.style.setProperty("--grid", grid);
-  els.board.style.setProperty("--image", `url("${image.src}")`);
   state.tiles.forEach((tileValue, position) => {
     const tile = document.createElement("button");
     tile.className = tileValue === grid * grid - 1 ? "tile blank" : "tile";
@@ -173,16 +252,32 @@ function renderBoard() {
 }
 
 function moveTile(position) {
-  if (!state.running) return;
+  if (!state.running || state.paused) return;
   const blank = state.tiles.indexOf(state.grid * state.grid - 1);
   if (!isNeighbor(position, blank, state.grid)) return;
   [state.tiles[position], state.tiles[blank]] = [state.tiles[blank], state.tiles[position]];
   state.steps += 1;
   renderBoard();
   updateHud();
+  playTone(420, 0.035);
   if (isSolved(state.tiles)) {
     finishGame();
   }
+}
+
+function handleBoardKeydown(event) {
+  const blank = state.tiles.indexOf(state.grid * state.grid - 1);
+  const row = Math.floor(blank / state.grid);
+  const col = blank % state.grid;
+  const targets = {
+    ArrowUp: row < state.grid - 1 ? blank + state.grid : -1,
+    ArrowDown: row > 0 ? blank - state.grid : -1,
+    ArrowLeft: col < state.grid - 1 ? blank + 1 : -1,
+    ArrowRight: col > 0 ? blank - 1 : -1,
+  };
+  if (!(event.key in targets)) return;
+  event.preventDefault();
+  moveTile(targets[event.key]);
 }
 
 function isNeighbor(a, b, grid) {
@@ -201,11 +296,15 @@ function updatePreview() {
   const image = images[state.imageIndex];
   els.preview.src = image.src;
   els.preview.alt = `${image.name}原图`;
+  els.imageName.textContent = image.name;
+  renderImageGallery();
 }
 
 function updateHud() {
   els.steps.textContent = String(state.steps);
   els.timer.textContent = formatTime(state.seconds);
+  els.modeLabel.textContent = state.mode === "challenge" ? "挑战模式" : "休闲模式";
+  els.gridLabel.textContent = `${state.grid} x ${state.grid}`;
 }
 
 function formatTime(seconds) {
@@ -215,24 +314,36 @@ function formatTime(seconds) {
 }
 
 function showHint() {
-  if (state.mode === "challenge") return;
+  if (state.mode === "challenge" || state.paused) return;
   const blank = state.tiles.indexOf(state.grid * state.grid - 1);
   const target = state.tiles.findIndex((tile, position) => tile === position && isNeighbor(position, blank, state.grid));
-  const position = target >= 0 ? target : state.tiles.findIndex((_, position) => isNeighbor(position, blank, state.grid));
+  const position = target >= 0 ? target : state.tiles.findIndex((_, index) => isNeighbor(index, blank, state.grid));
   const tile = els.board.querySelector(`[data-position="${position}"]`);
   if (!tile) return;
   tile.classList.add("hint");
+  playTone(760, 0.08);
   window.setTimeout(() => tile.classList.remove("hint"), 900);
 }
 
 async function finishGame() {
   stopTimer();
+  setPaused(false);
+  playWinSound();
+  let saveMessage = "休闲模式成绩不会写入排行榜。";
   if (state.mode === "challenge") {
-    await saveScore();
+    saveMessage = await saveScore();
     await loadLeaderboard(state.grid);
   }
+  state.lastResult = {
+    mode: state.mode,
+    grid: state.grid,
+    image: images[state.imageIndex].name,
+    seconds: state.seconds,
+    steps: state.steps,
+  };
   els.dialogTitle.textContent = state.mode === "challenge" ? "挑战成功" : "拼图完成";
   els.dialogMessage.textContent = `用时 ${formatTime(state.seconds)}，共移动 ${state.steps} 步。`;
+  els.dialogStatus.textContent = saveMessage;
   els.resultDialog.showModal();
 }
 
@@ -247,29 +358,37 @@ async function saveScore() {
   };
   if (!hasSupabase) {
     saveLocalScore(score);
-    return;
+    return "当前未连接在线数据库，成绩已保存到本地。";
   }
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/scores`, {
-    method: "POST",
-    headers: supabaseHeaders({ Prefer: "return=minimal" }),
-    body: JSON.stringify(score),
-  });
-  if (!response.ok) {
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/scores`, {
+      method: "POST",
+      headers: supabaseHeaders({ Prefer: "return=minimal" }),
+      body: JSON.stringify(score),
+    });
+    if (!response.ok) throw new Error(`Supabase status ${response.status}`);
+    return "挑战成绩已提交到在线排行榜。";
+  } catch {
     saveLocalScore(score);
+    return "在线提交失败，成绩已临时保存到本地。";
   }
 }
 
 async function loadLeaderboard(grid) {
-  els.leaderboard.innerHTML = "<li>读取中...</li>";
+  els.leaderboard.innerHTML = '<li class="rank-empty">读取中...</li>';
   const rows = hasSupabase ? await fetchRemoteScores(grid) : getLocalScores(grid);
   if (!rows.length) {
-    els.leaderboard.innerHTML = "<li>暂无成绩，来拿第一个第一名。</li>";
+    els.leaderboard.innerHTML = '<li class="rank-empty">暂无成绩，来拿第一个第一名。</li>';
     return;
   }
   els.leaderboard.innerHTML = "";
-  rows.slice(0, 8).forEach((score) => {
+  rows.slice(0, 8).forEach((score, index) => {
     const item = document.createElement("li");
-    item.innerHTML = `<span>${escapeHtml(score.player_name)}</span><strong>${formatTime(score.time_seconds)} / ${score.steps}步</strong>`;
+    item.innerHTML = `
+      <span class="rank-no">${index + 1}</span>
+      <span class="rank-player">${escapeHtml(score.player_name)}</span>
+      <strong>${formatTime(score.time_seconds)} / ${score.steps}步</strong>
+    `;
     els.leaderboard.append(item);
   });
 }
@@ -280,9 +399,13 @@ async function fetchRemoteScores(grid) {
   url.searchParams.set("grid_size", `eq.${grid}`);
   url.searchParams.set("order", "time_seconds.asc,steps.asc,created_at.asc");
   url.searchParams.set("limit", "8");
-  const response = await fetch(url, { headers: supabaseHeaders() });
-  if (!response.ok) return getLocalScores(grid);
-  return response.json();
+  try {
+    const response = await fetch(url, { headers: supabaseHeaders() });
+    if (!response.ok) return getLocalScores(grid);
+    return response.json();
+  } catch {
+    return getLocalScores(grid);
+  }
 }
 
 function supabaseHeaders(extra = {}) {
@@ -299,16 +422,91 @@ function sanitizeName(name) {
   return value || "玩家";
 }
 
+function selectNextImage() {
+  state.imageIndex = (state.imageIndex + 1) % images.length;
+  updatePreview();
+}
+
+function selectRandomImage() {
+  if (images.length < 2) return;
+  let next = state.imageIndex;
+  while (next === state.imageIndex) {
+    next = Math.floor(Math.random() * images.length);
+  }
+  state.imageIndex = next;
+}
+
 function saveLocalScore(score) {
-  const scores = JSON.parse(localStorage.getItem("pintu-scores") || "[]");
+  const scores = JSON.parse(localStorage.getItem(STORAGE_KEYS.scores) || "[]");
   scores.push({ ...score, created_at: new Date().toISOString() });
-  localStorage.setItem("pintu-scores", JSON.stringify(scores));
+  localStorage.setItem(STORAGE_KEYS.scores, JSON.stringify(scores));
 }
 
 function getLocalScores(grid) {
-  return JSON.parse(localStorage.getItem("pintu-scores") || "[]")
+  return JSON.parse(localStorage.getItem(STORAGE_KEYS.scores) || "[]")
     .filter((score) => Number(score.grid_size) === Number(grid))
     .sort((a, b) => a.time_seconds - b.time_seconds || a.steps - b.steps);
+}
+
+async function shareCurrentResult() {
+  const result = state.lastResult || {
+    mode: state.mode,
+    grid: state.grid,
+    image: images[state.imageIndex].name,
+    seconds: state.seconds,
+    steps: state.steps,
+  };
+  const text = `我在拼图游戏完成了 ${result.grid}x${result.grid} ${result.image}：用时 ${formatTime(result.seconds)}，${result.steps} 步。`;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: "拼图游戏成绩", text });
+      return;
+    } catch {
+      // Browser share can be cancelled; copying keeps the action useful.
+    }
+  }
+  try {
+    await navigator.clipboard?.writeText(text);
+    els.gameTip.textContent = "成绩文案已复制，可以直接分享给朋友。";
+  } catch {
+    els.gameTip.textContent = text;
+  }
+}
+
+function toggleMute() {
+  state.muted = !state.muted;
+  localStorage.setItem(STORAGE_KEYS.muted, String(state.muted));
+  updateMuteButton();
+}
+
+function updateMuteButton() {
+  els.muteToggle.textContent = state.muted ? "音效：关" : "音效：开";
+}
+
+function playTone(frequency, duration) {
+  const AudioApi = window.AudioContext || window.webkitAudioContext;
+  if (state.muted || !AudioApi) return;
+  let context;
+  try {
+    context = new AudioApi();
+  } catch {
+    return;
+  }
+  const oscillator = context.createOscillator();
+  const gain = context.createGain();
+  oscillator.frequency.value = frequency;
+  oscillator.type = "triangle";
+  gain.gain.value = 0.05;
+  oscillator.connect(gain);
+  gain.connect(context.destination);
+  oscillator.start();
+  oscillator.stop(context.currentTime + duration);
+  oscillator.addEventListener("ended", () => context.close());
+}
+
+function playWinSound() {
+  playTone(660, 0.08);
+  window.setTimeout(() => playTone(880, 0.1), 100);
 }
 
 function escapeHtml(value) {
@@ -318,7 +516,9 @@ function escapeHtml(value) {
   });
 }
 
+updateMuteButton();
 updateModeControls();
 updatePreview();
+updateHud();
 loadLeaderboard(state.grid);
-startGame();
+startGame(true);

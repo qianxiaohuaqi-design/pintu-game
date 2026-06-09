@@ -9,79 +9,105 @@
   </head>
   <body>
     <main class="shell">
-      <section class="hero-panel">
+      <section class="lobby-panel" id="setupPanel">
         <div class="topbar">
           <div>
             <p class="eyebrow">Pintu Web</p>
             <h1>拼图游戏</h1>
           </div>
-          <div class="status-pill" id="databaseStatus">本地排行榜</div>
+          <div class="topbar-actions">
+            <span class="status-pill" id="databaseStatus">本地排行榜</span>
+            <button class="small-btn" id="muteToggle" type="button">音效：开</button>
+          </div>
         </div>
 
-        <div class="setup" id="setupPanel">
-          <label class="field">
-            <span>玩家名</span>
-            <input id="playerName" maxlength="16" placeholder="输入昵称" value="玩家" />
-          </label>
-          <div class="control-group">
-            <span>模式</span>
-            <div class="segmented" data-group="mode">
-              <button class="selected" data-mode="casual">休闲模式</button>
-              <button data-mode="challenge">挑战模式</button>
+        <div class="lobby-grid">
+          <div class="setup-card">
+            <label class="field">
+              <span>玩家名</span>
+              <input id="playerName" maxlength="16" placeholder="输入昵称" value="玩家" />
+            </label>
+
+            <div class="control-group">
+              <span>模式</span>
+              <div class="segmented" data-group="mode">
+                <button class="selected" data-mode="casual" type="button">休闲模式</button>
+                <button data-mode="challenge" type="button">挑战模式</button>
+              </div>
             </div>
-          </div>
-          <div class="control-group">
-            <span>难度</span>
-            <div class="segmented" data-group="grid">
-              <button data-grid="3">3 x 3</button>
-              <button class="selected" data-grid="4">4 x 4</button>
-              <button data-grid="5">5 x 5</button>
+
+            <div class="control-group">
+              <span>难度</span>
+              <div class="segmented" data-group="grid">
+                <button data-grid="3" type="button">3 x 3</button>
+                <button class="selected" data-grid="4" type="button">4 x 4</button>
+                <button data-grid="5" type="button">5 x 5</button>
+              </div>
             </div>
+
+            <button class="primary-action" id="startGame" type="button">开始游戏</button>
           </div>
-          <div class="control-group">
-            <span>图片</span>
-            <div class="segmented" data-group="image">
-              <button class="selected" data-image="cat1">小猫</button>
-              <button data-image="dog1">小狗</button>
-              <button data-image="emoji1">表情</button>
+
+          <div class="gallery-card">
+            <div class="section-title">
+              <h2>选择图片</h2>
+              <button class="small-btn" id="randomImage" type="button">随机</button>
             </div>
+            <div class="image-gallery" id="imageGallery" aria-label="拼图图片选择"></div>
           </div>
-          <button class="primary-action" id="startGame">开始游戏</button>
+
+          <aside class="leaderboard-card" id="leaderboardPanel">
+            <div class="section-title">
+              <h2>在线排行榜</h2>
+              <div class="rank-tabs" id="rankTabs" aria-label="排行榜难度">
+                <button data-rank-grid="3" type="button">3x3</button>
+                <button class="selected" data-rank-grid="4" type="button">4x4</button>
+                <button data-rank-grid="5" type="button">5x5</button>
+              </div>
+            </div>
+            <ol id="leaderboard"></ol>
+          </aside>
         </div>
       </section>
 
       <section class="game-layout">
         <div class="game-panel">
           <div class="hud">
-            <button class="ghost-btn" id="backToSetup">返回设置</button>
-            <div class="hud-item">步数：<strong id="steps">0</strong></div>
-            <div class="hud-item">时间：<strong id="timer">00:00</strong></div>
+            <button class="ghost-btn" id="backToSetup" type="button">返回大厅</button>
+            <div class="hud-center">
+              <span class="hud-pill" id="modeLabel">休闲模式</span>
+              <span class="hud-pill" id="gridLabel">4 x 4</span>
+              <span class="hud-pill">步数 <strong id="steps">0</strong></span>
+              <span class="hud-pill">时间 <strong id="timer">00:00</strong></span>
+            </div>
+            <button class="ghost-btn" id="pauseToggle" type="button">暂停</button>
           </div>
+
           <div class="board-frame">
-            <div class="board" id="board" aria-label="拼图棋盘"></div>
+            <div class="board" id="board" aria-label="拼图棋盘" tabindex="0"></div>
+            <div class="pause-mask" id="pauseMask" hidden>已暂停</div>
           </div>
+
           <div class="toolbar">
-            <button id="restartGame">重新游戏</button>
-            <button id="changeImage">更换图片</button>
-            <button id="hintButton">智能提示</button>
+            <button id="restartGame" type="button">重新游戏</button>
+            <button id="changeImage" type="button">更换图片</button>
+            <button id="hintButton" type="button">智能提示</button>
+            <button id="shareResult" type="button">分享成绩</button>
           </div>
         </div>
 
         <aside class="side-panel">
           <div class="preview-card">
-            <h2>原图</h2>
+            <div class="section-title">
+              <h2>原图</h2>
+              <span id="imageName">小猫</span>
+            </div>
             <img id="previewImage" src="./image/cat/cat1/all.jpg" alt="当前拼图原图" />
           </div>
-          <div class="leaderboard-card">
-            <div class="leaderboard-title">
-              <h2>挑战排行榜</h2>
-              <select id="rankGrid" aria-label="排行榜难度">
-                <option value="3">3 x 3</option>
-                <option value="4" selected>4 x 4</option>
-                <option value="5">5 x 5</option>
-              </select>
-            </div>
-            <ol id="leaderboard"></ol>
+
+          <div class="tips-card">
+            <h2>本局状态</h2>
+            <p id="gameTip">选择模式和图片后开始游戏。</p>
           </div>
         </aside>
       </section>
@@ -91,9 +117,12 @@
       <div class="dialog-card">
         <h2 id="dialogTitle">拼图完成</h2>
         <p id="dialogMessage"></p>
+        <p class="dialog-status" id="dialogStatus"></p>
         <div class="dialog-actions">
-          <button id="dialogRestart">重新游戏</button>
-          <button id="dialogClose" class="primary-action">继续查看</button>
+          <button id="dialogRestart" type="button">再来一局</button>
+          <button id="dialogChangeImage" type="button">换张图</button>
+          <button id="dialogLeaderboard" type="button">看排行</button>
+          <button id="dialogClose" class="primary-action" type="button">继续查看</button>
         </div>
       </div>
     </dialog>
