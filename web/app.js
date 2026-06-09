@@ -95,7 +95,24 @@ document.querySelector("#dialogClose").addEventListener("click", () => els.resul
 els.player.addEventListener("input", () => {
   localStorage.setItem(STORAGE_KEYS.name, sanitizeName(els.player.value));
 });
-els.board.addEventListener("keydown", handleBoardKeydown);
+document.addEventListener("keydown", (event) => {
+  if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") return;
+  if (!state.running || state.paused) return;
+  const blank = state.tiles.indexOf(state.grid * state.grid - 1);
+  const row = Math.floor(blank / state.grid);
+  const col = blank % state.grid;
+  const targets = {
+    ArrowUp: row < state.grid - 1 ? blank + state.grid : -1,
+    ArrowDown: row > 0 ? blank - state.grid : -1,
+    ArrowLeft: col < state.grid - 1 ? blank + 1 : -1,
+    ArrowRight: col > 0 ? blank - 1 : -1,
+  };
+  if (!(event.key in targets)) return;
+  event.preventDefault();
+  if (targets[event.key] !== -1) {
+    moveTile(targets[event.key]);
+  }
+});
 
 document.querySelectorAll("[data-mode]").forEach((button) => {
   button.addEventListener("click", () => {
@@ -228,26 +245,50 @@ function isSolvable(tiles, grid) {
   return blankRowFromBottom % 2 === 0 ? inversions % 2 === 1 : inversions % 2 === 0;
 }
 
+let domTiles = [];
+
 function renderBoard() {
   const grid = state.grid;
   const image = images[state.imageIndex];
   els.board.innerHTML = "";
   els.board.style.setProperty("--grid", grid);
-  state.tiles.forEach((tileValue, position) => {
+  domTiles = new Array(grid * grid);
+
+  for (let tileValue = 0; tileValue < grid * grid; tileValue++) {
     const tile = document.createElement("button");
     tile.className = tileValue === grid * grid - 1 ? "tile blank" : "tile";
     tile.type = "button";
-    tile.dataset.position = String(position);
+    tile.dataset.tileValue = String(tileValue);
     tile.setAttribute("aria-label", tile.classList.contains("blank") ? "空白格" : `拼图块 ${tileValue + 1}`);
+
     if (!tile.classList.contains("blank")) {
       const sourceRow = Math.floor(tileValue / grid);
       const sourceCol = tileValue % grid;
       tile.style.backgroundImage = `url("${image.src}")`;
       tile.style.backgroundSize = `${grid * 100}% ${grid * 100}%`;
       tile.style.backgroundPosition = `${(sourceCol / (grid - 1)) * 100}% ${(sourceRow / (grid - 1)) * 100}%`;
-      tile.addEventListener("click", () => moveTile(position));
+      tile.addEventListener("click", () => {
+        const position = state.tiles.indexOf(tileValue);
+        moveTile(position);
+      });
     }
+
+    domTiles[tileValue] = tile;
     els.board.append(tile);
+  }
+  updateBoardPositions();
+}
+
+function updateBoardPositions() {
+  const grid = state.grid;
+  state.tiles.forEach((tileValue, position) => {
+    const tile = domTiles[tileValue];
+    if (!tile) return;
+    const row = Math.floor(position / grid);
+    const col = position % grid;
+    tile.style.setProperty("--row", row);
+    tile.style.setProperty("--col", col);
+    tile.dataset.position = String(position);
   });
 }
 
@@ -257,27 +298,12 @@ function moveTile(position) {
   if (!isNeighbor(position, blank, state.grid)) return;
   [state.tiles[position], state.tiles[blank]] = [state.tiles[blank], state.tiles[position]];
   state.steps += 1;
-  renderBoard();
+  updateBoardPositions();
   updateHud();
   playTone(420, 0.035);
   if (isSolved(state.tiles)) {
     finishGame();
   }
-}
-
-function handleBoardKeydown(event) {
-  const blank = state.tiles.indexOf(state.grid * state.grid - 1);
-  const row = Math.floor(blank / state.grid);
-  const col = blank % state.grid;
-  const targets = {
-    ArrowUp: row < state.grid - 1 ? blank + state.grid : -1,
-    ArrowDown: row > 0 ? blank - state.grid : -1,
-    ArrowLeft: col < state.grid - 1 ? blank + 1 : -1,
-    ArrowRight: col > 0 ? blank - 1 : -1,
-  };
-  if (!(event.key in targets)) return;
-  event.preventDefault();
-  moveTile(targets[event.key]);
 }
 
 function isNeighbor(a, b, grid) {
