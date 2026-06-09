@@ -27,8 +27,8 @@ const state = {
   seconds: 0,
   timerId: null,
   running: false,
-  paused: false,
-  muted: localStorage.getItem(STORAGE_KEYS.muted) === "true",
+  muted: false,
+  hintActive: false,
   lastResult: null,
 };
 
@@ -39,24 +39,21 @@ const els = {
   hint: document.querySelector("#hintButton"),
   preview: document.querySelector("#previewImage"),
   player: document.querySelector("#playerName"),
-  databaseStatus: document.querySelector("#databaseStatus"),
   leaderboard: document.querySelector("#leaderboard"),
   imageGallery: document.querySelector("#imageGallery"),
-  imageName: document.querySelector("#imageName"),
   modeLabel: document.querySelector("#modeLabel"),
   gridLabel: document.querySelector("#gridLabel"),
   gameTip: document.querySelector("#gameTip"),
-  pauseToggle: document.querySelector("#pauseToggle"),
-  pauseMask: document.querySelector("#pauseMask"),
-  muteToggle: document.querySelector("#muteToggle"),
   resultDialog: document.querySelector("#resultDialog"),
   dialogTitle: document.querySelector("#dialogTitle"),
   dialogMessage: document.querySelector("#dialogMessage"),
   dialogStatus: document.querySelector("#dialogStatus"),
+  dialogBackToSetup: document.querySelector("#dialogBackToSetup"),
+  dialogLeaderboard: document.querySelector("#dialogLeaderboard"),
+  dialogClose: document.querySelector("#dialogClose"),
 };
 
 const hasSupabase = Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
-els.databaseStatus.textContent = hasSupabase ? "在线排行榜" : "本地排行榜";
 els.player.value = localStorage.getItem(STORAGE_KEYS.name) || "玩家";
 
 const views = {
@@ -83,7 +80,6 @@ document.querySelector("#startGame").addEventListener("click", () => {
 document.querySelector("#restartGame").addEventListener("click", () => startGame());
 document.querySelector("#backToSetup").addEventListener("click", () => {
   stopTimer();
-  setPaused(false);
   showView("lobby");
 });
 document.querySelector("#changeImage").addEventListener("click", () => {
@@ -94,30 +90,28 @@ document.querySelector("#randomImage").addEventListener("click", () => {
   selectRandomImage();
   updatePreview();
 });
-document.querySelector("#hintButton").addEventListener("click", showHint);
-document.querySelector("#pauseToggle").addEventListener("click", togglePause);
-document.querySelector("#muteToggle").addEventListener("click", toggleMute);
+document.querySelector("#hintButton").addEventListener("click", toggleHint);
 document.querySelector("#shareResult").addEventListener("click", shareCurrentResult);
 document.querySelector("#dialogRestart").addEventListener("click", () => {
   els.resultDialog.close();
   startGame();
 });
-document.querySelector("#dialogChangeImage").addEventListener("click", () => {
+els.dialogBackToSetup.addEventListener("click", () => {
   els.resultDialog.close();
-  selectNextImage();
-  startGame();
+  showView("lobby");
 });
-document.querySelector("#dialogLeaderboard").addEventListener("click", () => {
+els.dialogLeaderboard.addEventListener("click", () => {
   els.resultDialog.close();
+  showView("lobby");
   document.querySelector("#leaderboardPanel").scrollIntoView({ behavior: "smooth", block: "center" });
 });
-document.querySelector("#dialogClose").addEventListener("click", () => els.resultDialog.close());
+els.dialogClose.addEventListener("click", () => els.resultDialog.close());
 els.player.addEventListener("input", () => {
   localStorage.setItem(STORAGE_KEYS.name, sanitizeName(els.player.value));
 });
 document.addEventListener("keydown", (event) => {
   if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") return;
-  if (!state.running || state.paused) return;
+  if (!state.running) return;
   const blank = state.tiles.indexOf(state.grid * state.grid - 1);
   const row = Math.floor(blank / state.grid);
   const col = blank % state.grid;
@@ -167,7 +161,7 @@ function renderImageGallery() {
     button.type = "button";
     button.className = index === state.imageIndex ? "image-choice selected" : "image-choice";
     button.dataset.imageIndex = String(index);
-    button.innerHTML = `<img src="${image.src}" alt="${image.name}" /><span>${image.name}</span>`;
+    button.innerHTML = `<img src="${image.src}" alt="${image.name}" />`;
     button.addEventListener("click", () => {
       state.imageIndex = index;
       updatePreview();
@@ -192,11 +186,13 @@ function updateModeControls() {
 
 function startGame(silent = false) {
   stopTimer();
-  setPaused(false);
   state.steps = 0;
   state.seconds = 0;
   state.running = true;
   state.lastResult = null;
+  state.hintActive = false;
+  els.hint.textContent = "智能提示";
+  els.hint.classList.remove("selected");
   state.tiles = createSolvableTiles(state.grid);
   updateModeControls();
   updatePreview();
@@ -209,10 +205,8 @@ function startGame(silent = false) {
 
 function startTimer() {
   state.timerId = window.setInterval(() => {
-    if (!state.paused) {
-      state.seconds += 1;
-      updateHud();
-    }
+    state.seconds += 1;
+    updateHud();
   }, 1000);
 }
 
@@ -222,17 +216,6 @@ function stopTimer() {
     state.timerId = null;
   }
   state.running = false;
-}
-
-function togglePause() {
-  if (!state.running) return;
-  setPaused(!state.paused);
-}
-
-function setPaused(paused) {
-  state.paused = paused;
-  els.pauseToggle.textContent = paused ? "继续" : "暂停";
-  els.pauseMask.hidden = !paused;
 }
 
 function createSolvableTiles(grid) {
@@ -312,12 +295,13 @@ function updateBoardPositions() {
 }
 
 function moveTile(position) {
-  if (!state.running || state.paused) return;
+  if (!state.running) return;
   const blank = state.tiles.indexOf(state.grid * state.grid - 1);
   if (!isNeighbor(position, blank, state.grid)) return;
   [state.tiles[position], state.tiles[blank]] = [state.tiles[blank], state.tiles[position]];
   state.steps += 1;
   updateBoardPositions();
+  updateHintDisplay();
   updateHud();
   playTone(420, 0.035);
   if (isSolved(state.tiles)) {
@@ -341,7 +325,6 @@ function updatePreview() {
   const image = images[state.imageIndex];
   els.preview.src = image.src;
   els.preview.alt = `${image.name}原图`;
-  els.imageName.textContent = image.name;
   renderImageGallery();
 }
 
@@ -358,21 +341,27 @@ function formatTime(seconds) {
   return `${min}:${sec}`;
 }
 
-function showHint() {
-  if (state.mode === "challenge" || state.paused) return;
+function toggleHint() {
+  if (state.mode === "challenge" || !state.running) return;
+  state.hintActive = !state.hintActive;
+  els.hint.textContent = state.hintActive ? "关闭提示" : "智能提示";
+  els.hint.classList.toggle("selected", state.hintActive);
+  updateHintDisplay();
+}
+
+function updateHintDisplay() {
+  document.querySelectorAll(".tile.hint").forEach(t => t.classList.remove("hint"));
+  if (!state.hintActive || state.mode === "challenge" || isSolved(state.tiles)) return;
+  
   const blank = state.tiles.indexOf(state.grid * state.grid - 1);
   const target = state.tiles.findIndex((tile, position) => tile === position && isNeighbor(position, blank, state.grid));
   const position = target >= 0 ? target : state.tiles.findIndex((_, index) => isNeighbor(index, blank, state.grid));
   const tile = els.board.querySelector(`[data-position="${position}"]`);
-  if (!tile) return;
-  tile.classList.add("hint");
-  playTone(760, 0.08);
-  window.setTimeout(() => tile.classList.remove("hint"), 900);
+  if (tile) tile.classList.add("hint");
 }
 
 async function finishGame() {
   stopTimer();
-  setPaused(false);
   playWinSound();
   let saveMessage = "休闲模式成绩不会写入排行榜。";
   if (state.mode === "challenge") {
@@ -386,6 +375,14 @@ async function finishGame() {
     seconds: state.seconds,
     steps: state.steps,
   };
+  if (state.mode === "casual") {
+    els.dialogLeaderboard.style.display = "none";
+    els.dialogClose.style.display = "none";
+  } else {
+    els.dialogLeaderboard.style.display = "";
+    els.dialogClose.style.display = "";
+  }
+  
   els.dialogTitle.textContent = state.mode === "challenge" ? "挑战成功" : "拼图完成";
   els.dialogMessage.textContent = `用时 ${formatTime(state.seconds)}，共移动 ${state.steps} 步。`;
   els.dialogStatus.textContent = saveMessage;
@@ -518,16 +515,6 @@ async function shareCurrentResult() {
   }
 }
 
-function toggleMute() {
-  state.muted = !state.muted;
-  localStorage.setItem(STORAGE_KEYS.muted, String(state.muted));
-  updateMuteButton();
-}
-
-function updateMuteButton() {
-  els.muteToggle.textContent = state.muted ? "音效：关" : "音效：开";
-}
-
 function playTone(frequency, duration) {
   const AudioApi = window.AudioContext || window.webkitAudioContext;
   if (state.muted || !AudioApi) return;
@@ -561,7 +548,6 @@ function escapeHtml(value) {
   });
 }
 
-updateMuteButton();
 updateModeControls();
 updatePreview();
 updateHud();
