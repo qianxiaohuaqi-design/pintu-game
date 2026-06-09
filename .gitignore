@@ -41,3 +41,6 @@ scratch/
 # Environment files
 .env
 .env.*
+
+# Supabase local metadata
+supabase/.temp/
