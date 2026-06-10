@@ -1,6 +1,9 @@
-# 拼图游戏 Pintu Web
+# 拼图游戏 Pintu
 
-这是一个拥有**极致丝滑体验**的现代网页拼图游戏！从一个基础的课程设计项目全面蜕变而来，现在它是一个对标原生 App 交互体验的纯 Web 应用。
+这是一个从 Java Swing 课程设计继续升级出来的拼图小游戏项目，当前包含两种形态：
+
+- Java 桌面版：`pintu.jar`，保留了最初课程设计的完整可运行版本。
+- Web 终极版：`index.html`，拥有**极致丝滑体验**的现代网页拼图游戏！对标原生 App 交互体验。
 
 ## ✨ 核心特性
 
@@ -32,11 +35,12 @@ python -m http.server 8000 --bind 127.0.0.1
 
 ## 📦 项目结构
 
-- `/index.html`: 游戏主入口文件。
+- `/pintu.jar`: Java 桌面版可执行程序（直接双击运行）。
+- `/src/`: Java 桌面版源代码。
+- `/index.html`: Web 版游戏主入口文件。
 - `/web/app.js`: 游戏核心逻辑、自定义拖拽物理引擎、Supabase API 对接。
 - `/web/styles.css`: 现代响应式 UI、玻璃拟物化设计风格。
 - `/image/`: 游戏内置的素材库。
-- `/.github/workflows/pages.yml`: 内置 GitHub Actions，轻松一键部署到 GitHub Pages。
 
 ---
-*告别旧时代的 Java Swing，拥抱现代 Web 带来的丝滑体验！*
+*Java 桌面版保留了最初课程设计的原汁原味，而现代 Web 版则带来了跨平台的丝滑体验！*
