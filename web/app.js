@@ -41,8 +41,13 @@ const els = {
   player: document.querySelector("#playerName"),
   leaderboard: document.querySelector("#leaderboard"),
   imageGallery: document.querySelector("#imageGallery"),
-  modeLabel: document.querySelector("#modeLabel"),
+  btnShare: document.querySelector("#btnShare"),
   gameTip: document.querySelector("#gameTip"),
+  uploadImageBtn: document.querySelector("#uploadImageBtn"),
+  customImageUpload: document.querySelector("#customImageUpload"),
+  contextMenu: document.querySelector("#contextMenu"),
+  menuDelete: document.querySelector("#menuDelete"),
+  modeLabel: document.querySelector("#modeLabel"),
   resultDialog: document.querySelector("#resultDialog"),
   dialogTitle: document.querySelector("#dialogTitle"),
   dialogMessage: document.querySelector("#dialogMessage"),
@@ -86,8 +91,32 @@ document.querySelector("#changeImage").addEventListener("click", () => {
   startGame();
 });
 document.querySelector("#randomImage").addEventListener("click", () => {
-  selectRandomImage();
+  const currentImageKey = images[state.imageIndex].key;
+  let newIndex = state.imageIndex;
+  while (images[newIndex].key === currentImageKey) {
+    newIndex = Math.floor(Math.random() * images.length);
+  }
+  state.imageIndex = newIndex;
   updatePreview();
+  startGame();
+});
+els.uploadImageBtn.addEventListener("click", () => {
+  els.customImageUpload.click();
+});
+els.customImageUpload.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const src = URL.createObjectURL(file);
+  // 新增图片，而不是替换
+  images.push({ key: `custom_${Date.now()}`, name: "自定义图片", src });
+  state.imageIndex = images.length - 1;
+  
+  renderImageGallery();
+  updatePreview();
+  startGame();
+  
+  e.target.value = '';
 });
 document.querySelector("#hintButton").addEventListener("click", toggleHint);
 document.querySelector("#shareResult").addEventListener("click", shareCurrentResult);
@@ -108,6 +137,187 @@ els.dialogClose.addEventListener("click", () => els.resultDialog.close());
 els.player.addEventListener("input", () => {
   localStorage.setItem(STORAGE_KEYS.name, sanitizeName(els.player.value));
 });
+
+// --- Context Menu Logic ---
+let targetImageIndex = -1;
+
+els.imageGallery.addEventListener("contextmenu", (e) => {
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  
+  e.preventDefault();
+  targetImageIndex = parseInt(btn.dataset.index, 10);
+  
+  els.contextMenu.style.display = "flex";
+  els.contextMenu.style.left = `${e.pageX}px`;
+  els.contextMenu.style.top = `${e.pageY}px`;
+});
+
+document.addEventListener("click", () => {
+  els.contextMenu.style.display = "none";
+});
+
+els.menuDelete.addEventListener("click", () => {
+  if (targetImageIndex === -1) return;
+  if (images.length <= 1) {
+    alert("至少保留一张图片！");
+    return;
+  }
+  
+  images.splice(targetImageIndex, 1);
+  
+  if (state.imageIndex === targetImageIndex) {
+    state.imageIndex = 0;
+    updatePreview();
+    startGame();
+  } else if (state.imageIndex > targetImageIndex) {
+    state.imageIndex--;
+  }
+  
+  renderImageGallery();
+});
+
+// --- Custom JS Drag and Drop Logic ---
+let isDragging = false;
+let draggedElement = null;
+let ghostElement = null;
+let startX = 0, startY = 0;
+let initialX = 0, initialY = 0;
+let dragIndex = -1;
+let hasMoved = false;
+
+els.imageGallery.addEventListener("pointerdown", (e) => {
+  if (e.button !== 0 && e.type !== 'touchstart' && e.type !== 'pointerdown') return;
+  const btn = e.target.closest("button");
+  if (!btn) return;
+  
+  dragIndex = parseInt(btn.dataset.index, 10);
+  draggedElement = btn;
+  hasMoved = false;
+  
+  const rect = btn.getBoundingClientRect();
+  startX = e.clientX;
+  startY = e.clientY;
+  
+  ghostElement = btn.cloneNode(true);
+  ghostElement.classList.add("sortable-fallback");
+  document.body.appendChild(ghostElement);
+  
+  initialX = rect.left;
+  initialY = rect.top;
+  ghostElement.style.position = "fixed";
+  ghostElement.style.left = `${initialX}px`;
+  ghostElement.style.top = `${initialY}px`;
+  ghostElement.style.width = `${rect.width}px`;
+  ghostElement.style.height = `${rect.height}px`;
+  ghostElement.style.pointerEvents = "none";
+  ghostElement.style.transition = "none";
+  ghostElement.style.margin = "0";
+  
+  btn.classList.add("sortable-ghost");
+  
+  isDragging = true;
+  
+  document.addEventListener("pointermove", onPointerMove, { passive: false });
+  document.addEventListener("pointerup", onPointerUp);
+  document.addEventListener("pointercancel", onPointerUp);
+});
+
+function onPointerMove(e) {
+  if (!isDragging) return;
+  const dx = e.clientX - startX;
+  const dy = e.clientY - startY;
+  
+  if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+    hasMoved = true;
+  }
+  
+  if (hasMoved) {
+    e.preventDefault(); // 阻止滚动
+  }
+  
+  ghostElement.style.transform = `translate(${dx}px, ${dy}px) scale(1.05)`;
+  
+  ghostElement.style.display = "none";
+  const elementBelow = document.elementFromPoint(e.clientX, e.clientY);
+  ghostElement.style.display = "";
+  
+  if (!elementBelow) return;
+  
+  const targetBtn = elementBelow.closest("#imageGallery button");
+  if (targetBtn && targetBtn !== draggedElement) {
+    const targetIndex = parseInt(targetBtn.dataset.index, 10);
+    const draggedIdx = parseInt(draggedElement.dataset.index, 10);
+    
+    if (draggedIdx < targetIndex) {
+      targetBtn.after(draggedElement);
+    } else {
+      targetBtn.before(draggedElement);
+    }
+    
+    const buttons = Array.from(els.imageGallery.children);
+    buttons.forEach((b, i) => {
+      b.dataset.index = i;
+    });
+  }
+}
+
+function onPointerUp(e) {
+  if (!isDragging) return;
+  isDragging = false;
+  
+  document.removeEventListener("pointermove", onPointerMove);
+  document.removeEventListener("pointerup", onPointerUp);
+  document.removeEventListener("pointercancel", onPointerUp);
+  
+  if (ghostElement) {
+    ghostElement.remove();
+    ghostElement = null;
+  }
+  
+  if (draggedElement) {
+    draggedElement.classList.remove("sortable-ghost");
+    
+    if (hasMoved) {
+      draggedElement.dataset.preventClick = "true";
+      setTimeout(() => {
+        if (draggedElement) draggedElement.dataset.preventClick = "false";
+      }, 0);
+    }
+    
+    const oldIndex = dragIndex;
+    const newIndex = parseInt(draggedElement.dataset.index, 10);
+    
+    if (oldIndex !== newIndex) {
+      const movedImage = images.splice(oldIndex, 1)[0];
+      images.splice(newIndex, 0, movedImage);
+      
+      if (state.imageIndex === oldIndex) {
+        state.imageIndex = newIndex;
+      } else if (state.imageIndex > oldIndex && state.imageIndex <= newIndex) {
+        state.imageIndex--;
+      } else if (state.imageIndex < oldIndex && state.imageIndex >= newIndex) {
+        state.imageIndex++;
+      }
+    }
+    
+    draggedElement = null;
+    dragIndex = -1;
+    
+    renderImageGallery();
+  }
+}
+
+function initGame() {
+  renderImageGallery();
+  updatePreview();
+  loadLeaderboard(state.grid);
+  updateModeControls();
+}
+
+// Start Game
+initGame();
+
 document.addEventListener("keydown", (event) => {
   if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") return;
   if (!state.running) return;
@@ -156,16 +366,17 @@ document.querySelectorAll("[data-rank-grid]").forEach((button) => {
 function renderImageGallery() {
   els.imageGallery.innerHTML = "";
   images.forEach((image, index) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = index === state.imageIndex ? "image-choice selected" : "image-choice";
-    button.dataset.imageIndex = String(index);
-    button.innerHTML = `<img src="${image.src}" alt="${image.name}" />`;
-    button.addEventListener("click", () => {
+    const btn = document.createElement("button");
+    btn.className = index === state.imageIndex ? "image-choice selected" : "image-choice";
+    btn.dataset.index = index;
+    // btn.draggable = true; // 由SortableJS接管
+    btn.innerHTML = `<img src="${image.src}" alt="${image.name}" />`;
+    btn.addEventListener("click", () => {
+      if (btn.dataset.preventClick === "true") return;
       state.imageIndex = index;
       updatePreview();
     });
-    els.imageGallery.append(button);
+    els.imageGallery.append(btn);
   });
 }
 
@@ -245,8 +456,6 @@ function createSolvableTiles(grid) {
   state.solutionPath = path.reverse();
   return tiles;
 }
-
-// Removed old shuffle and isSolvable functions as they are no longer needed
 
 let domTiles = [];
 
@@ -433,11 +642,17 @@ async function loadLeaderboard(grid) {
   }
   els.leaderboard.innerHTML = "";
   rows.slice(0, 8).forEach((score, index) => {
+    let rankDisplay = index + 1;
+    let rankClass = "rank-no";
+    if (index === 0) { rankDisplay = "👑"; rankClass += " rank-1"; }
+    else if (index === 1) { rankDisplay = "🥈"; rankClass += " rank-2"; }
+    else if (index === 2) { rankDisplay = "🥉"; rankClass += " rank-3"; }
+
     const item = document.createElement("li");
     item.innerHTML = `
-      <span class="rank-no">${index + 1}</span>
+      <span class="${rankClass}">${rankDisplay}</span>
       <span class="rank-player">${escapeHtml(score.player_name)}</span>
-      <strong>${formatTime(score.time_seconds)} / ${score.steps}步</strong>
+      <strong style="font-size: 15px; color: #7c4c23;">${formatTime(score.time_seconds)} / ${score.steps}步</strong>
     `;
     els.leaderboard.append(item);
   });
@@ -477,15 +692,6 @@ function selectNextImage() {
   updatePreview();
 }
 
-function selectRandomImage() {
-  if (images.length < 2) return;
-  let next = state.imageIndex;
-  while (next === state.imageIndex) {
-    next = Math.floor(Math.random() * images.length);
-  }
-  state.imageIndex = next;
-}
-
 function saveLocalScore(score) {
   const scores = JSON.parse(localStorage.getItem(STORAGE_KEYS.scores) || "[]");
   scores.push({ ...score, created_at: new Date().toISOString() });
@@ -506,7 +712,13 @@ async function shareCurrentResult() {
     seconds: state.seconds,
     steps: state.steps,
   };
-  const text = `我在拼图游戏完成了 ${result.grid}x${result.grid} ${result.image}：用时 ${formatTime(result.seconds)}，${result.steps} 步。`;
+  
+  const modeName = result.mode === "challenge" ? "挑战模式" : "休闲模式";
+  // 使用固定的线上部署链接
+  const url = "https://qianxiaohuaqi-design.github.io/pintu-game/";
+  
+  const text = `🧩 拼图游戏 🧩\n\n🏆 模式：${modeName}\n📏 难度：${result.grid}x${result.grid}\n⏱️ 用时：${formatTime(result.seconds)}\n👣 步数：${result.steps}步\n\n快来挑战我的纪录吧！👇\n🔗 ${url}`;
+
   if (navigator.share) {
     try {
       await navigator.share({ title: "拼图游戏成绩", text });
@@ -517,9 +729,9 @@ async function shareCurrentResult() {
   }
   try {
     await navigator.clipboard?.writeText(text);
-    els.gameTip.textContent = "成绩文案已复制，可以直接分享给朋友。";
+    els.gameTip.textContent = "精美成绩单已复制，快去粘贴分享给朋友吧！";
   } catch {
-    els.gameTip.textContent = text;
+    els.gameTip.textContent = "复制失败，请手动选择复制。";
   }
 }
 

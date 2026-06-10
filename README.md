@@ -1,43 +1,42 @@
-# 拼图游戏 Pintu
+# 拼图游戏 Pintu Web
 
-这是一个从 Java Swing 课程设计继续升级出来的拼图小游戏项目，当前包含两种形态：
+这是一个拥有**极致丝滑体验**的现代网页拼图游戏！从一个基础的课程设计项目全面蜕变而来，现在它是一个对标原生 App 交互体验的纯 Web 应用。
 
-- Java 桌面版：`pintu.jar`，保留课程设计的完整可运行版本。
-- Web 可玩版：`index.html`，用于发布到 GitHub Pages，让朋友打开网址直接游玩。
+## ✨ 核心特性
 
-## Web 版功能
+- **两种游戏模式**：
+  - 🎮 **休闲模式**：带有智能一键提示功能，适合放松身心，随时随地拼几局。
+  - 🏆 **挑战模式**：真男人的选择！挑战最短时间和最少步数，通关后成绩自动计入全球排行榜。
+- **自定义你的拼图**：不仅内置了可爱的猫猫、狗狗和表情包，还可以**自由上传你喜欢的任何图片**进行挑战！
+- **原生级图库管理**：
+  - 🖱️ 支持**右键菜单**进行图片重命名和删除。
+  - 👆 支持**极致丝滑的拖拽排序**！长按图片即可悬浮拖拽，底下的图库会像手机 App 一样实时排版避让（采用纯原生 JavaScript 高性能渲染引擎）。
+- **多种难度**：3x3、4x4、5x5 自由切换，老少皆宜。
 
-- 支持休闲模式和挑战模式。
-- 支持 3 x 3、4 x 4、5 x 5 三种难度。
-- 支持猫、狗、表情素材切换。
-- 休闲模式提供智能提示。
-- 挑战模式通关后提交排行榜成绩。
-- 未配置 Supabase 时自动使用浏览器本地排行榜。
+## 🚀 游玩方法
 
-## Supabase 数据库配置
-
-1. 在 Supabase 新建项目 `pintu-game`。
-2. 打开 SQL Editor，执行 `supabase/schema.sql`。
-3. 在 Project Settings -> API 里复制 Project URL 和 publishable/anon key。
-4. 填入 `web/supabase-config.js`：
-
-```js
-export const SUPABASE_URL = "https://你的项目.supabase.co";
-export const SUPABASE_PUBLISHABLE_KEY = "你的 publishable 或 anon key";
-```
-
-不要把 service_role key 放进网页代码。
-
-## 本地预览
+只需要在本地启动一个静态服务器（或者直接部署到任何静态网站托管平台）：
 
 ```powershell
-python -m http.server 5173 --bind 127.0.0.1
+python -m http.server 8000 --bind 127.0.0.1
 ```
+打开 `http://127.0.0.1:8000/` 即可直接游玩。
 
-然后打开 `http://127.0.0.1:5173/`。
+## ☁️ 在线排行榜 (Supabase)
 
-## 发布
+项目内置了对 [Supabase](https://supabase.com/) 的无缝集成。如果要开启全球在线排行榜功能：
+1. 在 Supabase 新建项目。
+2. 打开 SQL Editor，执行项目自带的 `supabase/schema.sql` 以创建表结构。
+3. 获取你的 `Project URL` 和 `anon key`，填入 `web/supabase-config.js` 文件中。
+*(如果不配置，游戏会自动降级使用浏览器本地排行榜，丝毫不影响游玩体验！)*
 
-仓库内置 GitHub Pages 工作流：`.github/workflows/pages.yml`。
+## 📦 项目结构
 
-推送到 GitHub 后，在仓库 Settings -> Pages 中选择 GitHub Actions 作为 Pages 来源，后续每次推送 `master` 或 `main` 都会自动部署。
+- `/index.html`: 游戏主入口文件。
+- `/web/app.js`: 游戏核心逻辑、自定义拖拽物理引擎、Supabase API 对接。
+- `/web/styles.css`: 现代响应式 UI、玻璃拟物化设计风格。
+- `/image/`: 游戏内置的素材库。
+- `/.github/workflows/pages.yml`: 内置 GitHub Actions，轻松一键部署到 GitHub Pages。
+
+---
+*告别旧时代的 Java Swing，拥抱现代 Web 带来的丝滑体验！*

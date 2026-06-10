@@ -48,7 +48,11 @@
           <div class="gallery-card">
             <div class="section-title">
               <h2>选择图片</h2>
-              <button class="small-btn" id="randomImage" type="button">随机</button>
+              <div style="display: flex; gap: 8px;">
+                <input type="file" id="customImageUpload" accept="image/*" style="display: none;">
+                <button class="small-btn" id="uploadImageBtn" type="button">上传</button>
+                <button class="small-btn" id="randomImage" type="button">随机</button>
+              </div>
             </div>
             <div class="image-gallery" id="imageGallery" aria-label="拼图图片选择"></div>
           </div>
@@ -119,6 +123,10 @@
         </div>
       </div>
     </dialog>
+
+    <div id="contextMenu" class="context-menu" style="display: none;">
+      <button id="menuDelete" type="button" style="color: #d9534f;">删除图片</button>
+    </div>
 
     <script type="module" src="./web/app.js"></script>
   </body>
