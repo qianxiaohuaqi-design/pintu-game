@@ -42,7 +42,6 @@ const els = {
   leaderboard: document.querySelector("#leaderboard"),
   imageGallery: document.querySelector("#imageGallery"),
   modeLabel: document.querySelector("#modeLabel"),
-  gridLabel: document.querySelector("#gridLabel"),
   gameTip: document.querySelector("#gameTip"),
   resultDialog: document.querySelector("#resultDialog"),
   dialogTitle: document.querySelector("#dialogTitle"),
@@ -191,7 +190,7 @@ function startGame(silent = false) {
   state.running = true;
   state.lastResult = null;
   state.hintActive = false;
-  els.hint.textContent = "智能提示";
+  els.hint.textContent = "开启提示";
   els.hint.classList.remove("selected");
   state.tiles = createSolvableTiles(state.grid);
   updateModeControls();
@@ -219,34 +218,35 @@ function stopTimer() {
 }
 
 function createSolvableTiles(grid) {
-  const solved = Array.from({ length: grid * grid }, (_, index) => index);
-  let tiles = [...solved];
-  do {
-    tiles = shuffle([...solved]);
-  } while (!isSolvable(tiles, grid) || isSolved(tiles));
+  let tiles = Array.from({ length: grid * grid }, (_, index) => index);
+  let blank = grid * grid - 1;
+  let lastMove = -1;
+  const numMoves = grid === 3 ? 60 : grid === 4 ? 120 : 200;
+  let path = [];
+
+  for (let i = 0; i < numMoves; i++) {
+    const neighbors = [];
+    const row = Math.floor(blank / grid);
+    const col = blank % grid;
+    if (row > 0) neighbors.push(blank - grid);
+    if (row < grid - 1) neighbors.push(blank + grid);
+    if (col > 0) neighbors.push(blank - 1);
+    if (col < grid - 1) neighbors.push(blank + 1);
+
+    const validMoves = neighbors.filter(n => n !== lastMove);
+    const move = validMoves[Math.floor(Math.random() * validMoves.length)];
+
+    [tiles[move], tiles[blank]] = [tiles[blank], tiles[move]];
+    path.push(blank);
+    lastMove = blank;
+    blank = move;
+  }
+
+  state.solutionPath = path.reverse();
   return tiles;
 }
 
-function shuffle(items) {
-  for (let i = items.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j], items[i]];
-  }
-  return items;
-}
-
-function isSolvable(tiles, grid) {
-  const values = tiles.filter((tile) => tile !== grid * grid - 1);
-  let inversions = 0;
-  for (let i = 0; i < values.length; i += 1) {
-    for (let j = i + 1; j < values.length; j += 1) {
-      if (values[i] > values[j]) inversions += 1;
-    }
-  }
-  if (grid % 2 === 1) return inversions % 2 === 0;
-  const blankRowFromBottom = grid - Math.floor(tiles.indexOf(grid * grid - 1) / grid);
-  return blankRowFromBottom % 2 === 0 ? inversions % 2 === 1 : inversions % 2 === 0;
-}
+// Removed old shuffle and isSolvable functions as they are no longer needed
 
 let domTiles = [];
 
@@ -298,6 +298,15 @@ function moveTile(position) {
   if (!state.running) return;
   const blank = state.tiles.indexOf(state.grid * state.grid - 1);
   if (!isNeighbor(position, blank, state.grid)) return;
+
+  if (state.solutionPath && state.solutionPath.length > 0) {
+    if (position === state.solutionPath[0]) {
+      state.solutionPath.shift();
+    } else {
+      state.solutionPath.unshift(blank);
+    }
+  }
+
   [state.tiles[position], state.tiles[blank]] = [state.tiles[blank], state.tiles[position]];
   state.steps += 1;
   updateBoardPositions();
@@ -332,7 +341,6 @@ function updateHud() {
   els.steps.textContent = String(state.steps);
   els.timer.textContent = formatTime(state.seconds);
   els.modeLabel.textContent = state.mode === "challenge" ? "挑战模式" : "休闲模式";
-  els.gridLabel.textContent = `${state.grid} x ${state.grid}`;
 }
 
 function formatTime(seconds) {
@@ -344,7 +352,7 @@ function formatTime(seconds) {
 function toggleHint() {
   if (state.mode === "challenge" || !state.running) return;
   state.hintActive = !state.hintActive;
-  els.hint.textContent = state.hintActive ? "关闭提示" : "智能提示";
+  els.hint.textContent = state.hintActive ? "关闭提示" : "开启提示";
   els.hint.classList.toggle("selected", state.hintActive);
   updateHintDisplay();
 }
@@ -353,11 +361,11 @@ function updateHintDisplay() {
   document.querySelectorAll(".tile.hint").forEach(t => t.classList.remove("hint"));
   if (!state.hintActive || state.mode === "challenge" || isSolved(state.tiles)) return;
   
-  const blank = state.tiles.indexOf(state.grid * state.grid - 1);
-  const target = state.tiles.findIndex((tile, position) => tile === position && isNeighbor(position, blank, state.grid));
-  const position = target >= 0 ? target : state.tiles.findIndex((_, index) => isNeighbor(index, blank, state.grid));
-  const tile = els.board.querySelector(`[data-position="${position}"]`);
-  if (tile) tile.classList.add("hint");
+  if (state.solutionPath && state.solutionPath.length > 0) {
+    const position = state.solutionPath[0];
+    const tile = els.board.querySelector(`[data-position="${position}"]`);
+    if (tile) tile.classList.add("hint");
+  }
 }
 
 async function finishGame() {

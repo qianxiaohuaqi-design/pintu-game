@@ -69,11 +69,9 @@
 
       <section class="game-layout view-hidden">
         <div class="game-panel">
-          <div class="hud">
-            <button class="ghost-btn" id="backToSetup" type="button">返回大厅</button>
+          <div class="hud" style="justify-content: center;">
             <div class="hud-center">
               <span class="hud-pill" id="modeLabel">休闲模式</span>
-              <span class="hud-pill" id="gridLabel">4 x 4</span>
               <span class="hud-pill">步数 <strong id="steps">0</strong></span>
               <span class="hud-pill">时间 <strong id="timer">00:00</strong></span>
             </div>
@@ -84,9 +82,10 @@
           </div>
 
           <div class="toolbar">
+            <button id="backToSetup" type="button">返回大厅</button>
             <button id="restartGame" type="button">重新游戏</button>
             <button id="changeImage" type="button">更换图片</button>
-            <button id="hintButton" type="button">智能提示</button>
+            <button id="hintButton" type="button">开启提示</button>
             <button id="shareResult" type="button">分享成绩</button>
           </div>
         </div>
