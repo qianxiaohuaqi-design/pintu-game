@@ -107,14 +107,38 @@ els.customImageUpload.addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
 
-  const src = URL.createObjectURL(file);
-  // 新增图片，而不是替换
-  images.push({ key: `custom_${Date.now()}`, name: "自定义图片", src });
-  state.imageIndex = images.length - 1;
-  
-  renderImageGallery();
-  updatePreview();
-  startGame();
+  const tempSrc = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    // 创建一个正方形的 canvas，居中裁剪原图防止变形
+    const size = Math.min(img.width, img.height);
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    
+    // 计算居中裁剪的起始坐标
+    const startX = (img.width - size) / 2;
+    const startY = (img.height - size) / 2;
+    
+    // 绘制并裁剪
+    ctx.drawImage(img, startX, startY, size, size, 0, 0, size, size);
+    
+    // 转换为 Base64 图片 (压缩质量 0.9)
+    const src = canvas.toDataURL("image/jpeg", 0.9);
+    
+    // 新增图片
+    images.push({ key: `custom_${Date.now()}`, name: "自定义图片", src });
+    state.imageIndex = images.length - 1;
+    
+    renderImageGallery();
+    updatePreview();
+    startGame();
+    
+    // 释放临时对象
+    URL.revokeObjectURL(tempSrc);
+  };
+  img.src = tempSrc;
   
   e.target.value = '';
 });
